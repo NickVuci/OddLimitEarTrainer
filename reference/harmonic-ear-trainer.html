@@ -222,7 +222,7 @@ h2,h3{color:var(--nv-burgundy-ink)}
       </div>
       <p class="status" id="status" role="status"></p>
       <p class="notice" id="notice" hidden></p>
-      <p class="notice" id="micTip" hidden><b>Sound cut out when the mic came on?</b> Your system is muting playback while a mic is open. On Windows, run <code>mmsys.cpl</code> and set the Communications tab to “Do nothing”. Some laptops mute the headphone jack whenever their built-in mic is in use; a USB or headset mic avoids that.</p>
+      <p class="notice" id="micTip" hidden><b>Sound cut out when the mic came on?</b> Windows may reduce playback while a mic is open. Run <code>mmsys.cpl</code> and set the Communications tab to “Do nothing”. Check the browser’s output in Volume mixer. Some laptops mute the headphone jack whenever their built-in mic is in use; a USB or headset mic may help.</p>
     </section>
 
     <section class="card trace" aria-label="Pitch trace">
@@ -277,24 +277,52 @@ if(!st.set.length)st.set=[3,5,7];
 if(!st.set.includes(st.target))st.target=st.set[0];
 
 /* ---------- audio out ---------- */
-let ac,master,wave,droneN=null,scoreBlockedUntil=0;
+let ac,master,wave,droneN=null,droneEpoch=0,scoreBlockedUntil=0;
+const GAIN_TRIM=1.6;   // headroom is handled by the limiter below, so the volume slider can drive it harder
 function audio(){
-  if(!ac){ac=new(window.AudioContext||window.webkitAudioContext)();ac.onstatechange=()=>{if(ac.state!=='running'&&ac.state!=='closed')ac.resume().catch(()=>{})};master=ac.createGain();master.gain.value=st.vol;master.connect(ac.destination);
-    const N=8,re=new Float32Array(N),im=new Float32Array(N);[0,1,.32,.14,.08,.04,.02,.01].forEach((v,i)=>im[i]=v);wave=ac.createPeriodicWave(re,im)}
-  if(ac.state!=='running')ac.resume();return ac;
+  if(!ac){ac=new(window.AudioContext||window.webkitAudioContext)();
+    ac.onstatechange=()=>{if((ac.state==='interrupted'||ac.state==='suspended')&&micOn){setStatus('Audio interrupted. Tap a sound button or turn the microphone on again to resume.','bad');$('micTip').hidden=false}};
+    // a rich, bright timbre: laptop speakers can't reproduce a 100–260 Hz fundamental, so the pitch has to come through the upper harmonics
+    const N=24,re=new Float32Array(N),im=new Float32Array(N);for(let k=1;k<N;k++)im[k]=Math.pow(k,-1.1);wave=ac.createPeriodicWave(re,im);
+    master=ac.createGain();master.gain.value=st.vol*GAIN_TRIM;
+    const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=5000;lp.Q.value=.5;
+    const lim=ac.createDynamicsCompressor();lim.threshold.value=-10;lim.knee.value=6;lim.ratio.value=12;lim.attack.value=.003;lim.release.value=.15;
+    master.connect(lp);lp.connect(lim);lim.connect(ac.destination)}
+  return ac;
 }
-function tone(f,when=0,dur=1.6,amp=.25){const a=audio(),t=a.currentTime+when+.01,o=a.createOscillator(),g=a.createGain();o.setPeriodicWave(wave);o.frequency.value=f;
+async function ensureAudio(){
+  try{
+    const a=audio();
+    if(a.state!=='running'){
+      let timeout;
+      try{await Promise.race([a.resume(),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('Audio did not start')),2500)})])}
+      finally{clearTimeout(timeout)}
+    }
+    if(a.state!=='running')throw new Error('Audio was interrupted');
+    $('notice').hidden=true;return a;
+  }catch(e){
+    const n=$('notice');n.hidden=false;
+    n.textContent='Playback could not start. Check this tab’s sound permission, the browser output device, and the Windows volume mixer, then tap a sound button again.';
+    setStatus('Playback unavailable.','bad');const err=new Error('Playback unavailable');err.audioStart=true;throw err;
+  }
+}
+async function tone(f,when=0,dur=1.6,amp=.25){let a;try{a=await ensureAudio()}catch(e){return false}
+  const t=a.currentTime+when+.01,o=a.createOscillator(),g=a.createGain();o.setPeriodicWave(wave);o.frequency.value=f;
   scoreBlockedUntil=Math.max(scoreBlockedUntil,performance.now()+(when+dur+.6)*1000);
-  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(amp,t+.03);g.gain.setTargetAtTime(amp*.6,t+.1,.3);g.gain.setTargetAtTime(0,t+dur-.4,.15);o.connect(g).connect(master);o.start(t);o.stop(t+dur+.5)}
-function setDrone(on){const a=audio();
-  if(on&&!droneN){const o=a.createOscillator(),g=a.createGain();o.setPeriodicWave(wave);o.frequency.value=st.f0;g.gain.setValueAtTime(0,a.currentTime);g.gain.linearRampToValueAtTime(.12,a.currentTime+.5);o.connect(g).connect(master);o.start();droneN={o,g}}
-  else if(!on&&droneN){const{o,g}=droneN;g.gain.setTargetAtTime(0,a.currentTime,.1);o.stop(a.currentTime+.6);droneN=null}
-  st.drone=on;scoreBlockedUntil=Math.max(scoreBlockedUntil,performance.now()+700);$('droneBtn').setAttribute('aria-pressed',String(on));
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(amp,t+.03);g.gain.setTargetAtTime(amp*.6,t+.1,.3);g.gain.setTargetAtTime(0,t+dur-.4,.15);o.connect(g).connect(master);o.start(t);o.stop(t+dur+.5);return true}
+async function setDrone(on){const epoch=++droneEpoch;
+  st.drone=on;$('droneBtn').setAttribute('aria-pressed',String(on));
+  if(on){
+    let a;try{a=await ensureAudio()}catch(e){if(epoch===droneEpoch){st.drone=false;$('droneBtn').setAttribute('aria-pressed','false')}return}
+    if(epoch!==droneEpoch)return;
+    if(!droneN){const o=a.createOscillator(),g=a.createGain();o.setPeriodicWave(wave);o.frequency.value=st.f0;g.gain.setValueAtTime(0,a.currentTime);g.gain.linearRampToValueAtTime(.12,a.currentTime+.5);o.connect(g).connect(master);o.start();droneN={o,g}}
+  }else if(droneN){const a=ac,{o,g}=droneN;g.gain.setTargetAtTime(0,a.currentTime,.1);o.stop(a.currentTime+.6);droneN=null}
+  scoreBlockedUntil=Math.max(scoreBlockedUntil,performance.now()+700);
 }
 const tgtF=n=>st.f0*H(n).r;
 
 /* ---------- mic + pitch ---------- */
-let an,buf,micCtx=null,micOn=false,micStream=null,micNodes=null,micPending=false,micEpoch=0,decimation=2;
+let an,buf,micOn=false,micStream=null,micNodes=null,micPending=false,micEpoch=0,decimation=2;
 async function enableMic(){
   const n=$('notice');
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){showNotice();return}
@@ -302,10 +330,11 @@ async function enableMic(){
   micPending=true;$('micBtn').disabled=true;$('micTxt').textContent='Connecting…';
   const epoch=++micEpoch;
   try{
-    // the mic gets its own audio context: tying it to the playback context can stall or silence the output on some drivers
-    audio();const a=new(window.AudioContext||window.webkitAudioContext)();micCtx=a;
-    const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
-    if(epoch!==micEpoch){s.getTracks().forEach(t=>t.stop());if(a.state!=='closed')a.close();return}
+    // Keep the mic analysis separate from the speakers while sharing the running output context.
+    const a=await ensureAudio();
+    if(epoch!==micEpoch)return;
+    const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:true}});
+    if(epoch!==micEpoch){s.getTracks().forEach(t=>t.stop());return}
     micStream=s;
     const src=a.createMediaStreamSource(s);
     const hp=a.createBiquadFilter();hp.type='highpass';hp.frequency.value=65;hp.Q.value=.7;
@@ -314,18 +343,19 @@ async function enableMic(){
     an=a.createAnalyser();an.fftSize=2**Math.ceil(Math.log2(2048*decimation));an.smoothingTimeConstant=0;buf=new Float32Array(an.fftSize);
     src.connect(hp);hp.connect(lp);lp.connect(an);micNodes=[src,hp,lp,an];
     s.getTracks().forEach(t=>t.onended=()=>{disableMic();setStatus('Microphone disconnected. Enable it to sing again.','bad')});
-    if(a.state!=='running')a.resume();micOn=true;$('micTxt').textContent='Turn microphone off';$('micBtn').setAttribute('aria-pressed','true');n.hidden=true;
+    await ensureAudio();
+    if(epoch!==micEpoch)return;
+    micOn=true;$('micTxt').textContent='Turn microphone off';$('micBtn').setAttribute('aria-pressed','true');n.hidden=true;
     resetTracking();
     $('micTip').hidden=false;
     setStatus(st.mode==='id'?'Microphone on. Identify mode is by ear, so it isn’t listening here.':st.mode==='free'?'Listening. Sing anything; the nearest selected harmonic lights up.':`Listening. Find the ${NAME[st.target]}. Headphones keep the drone out of the mic.`,'');
-  }catch(e){if(epoch===micEpoch){disableMic();showNotice(e&&e.name)}}
+  }catch(e){if(epoch===micEpoch){disableMic();if(!e||!e.audioStart)showNotice(e&&e.name)}}
   finally{micPending=false;$('micBtn').disabled=false;if(!micOn)$('micTxt').textContent='Enable microphone'}
 }
 function disableMic(){
   micEpoch++;
   if(micStream){micStream.getTracks().forEach(t=>{t.onended=null;t.stop()});micStream=null}
   if(micNodes){micNodes.forEach(n=>n.disconnect());micNodes=null}
-  if(micCtx){if(micCtx.state!=='closed')micCtx.close().catch(()=>{});micCtx=null}
   an=null;buf=null;micOn=false;resetTracking();$('micTip').hidden=true;
   $('micTxt').textContent='Enable microphone';$('micBtn').setAttribute('aria-pressed','false');$('lvl').style.width='0%';
   $('needle').style.opacity=.25;$('you').textContent='You: —';$('dir').textContent='Waiting for your voice';
@@ -352,18 +382,18 @@ function yin(sr){
   return{f:sr/(T+Math.max(-1,Math.min(1,sh))),rms,conf:1-x1};
 }
 /* tracker: noise-adaptive gate, onset confirmation, octave-jump rejection, adaptive smoothing */
-let gate=.006,floor=.003;
+let gate=.0015,floor=.0005;
 const TR={voiced:false,sm:0,lastV:0,cand:null,candN:0};
 function resetTracking(){
   TR.voiced=false;TR.sm=0;TR.lastV=0;TR.cand=null;TR.candN=0;
-  gate=.006;floor=.003;
+  gate=.0015;floor=.0005;
   VW.length=0;trail.length=0;hold=0;errAcc=0;errN=0;lastVoice=0;
 }
 function detect(now){
-  an.getFloatTimeDomainData(buf);const r=yin(micCtx.sampleRate/decimation);
-  $('lvl').style.width=Math.min(100,r.rms*700)+'%';
+  an.getFloatTimeDomainData(buf);const r=yin(ac.sampleRate/decimation);
+  $('lvl').style.width=Math.min(100,Math.max(0,(20*Math.log10(Math.max(r.rms,1e-6))+65)*2.5))+'%';
   if(!r.f||r.conf<.7){
-    if(!r.f){floor=floor*.97+r.rms*.03;gate=Math.max(.004,Math.min(.03,floor*2.8))}
+    if(!r.f&&r.rms<gate*.7){floor=floor*.97+r.rms*.03;gate=Math.max(.0008,Math.min(.02,floor*1.8))}
     if(TR.voiced&&now-TR.lastV>160)TR.voiced=false;
     TR.cand=null;TR.candN=0;
     return null;
@@ -421,8 +451,9 @@ function next(play=true){
   if(st.mode==='id'&&play)setTimeout(()=>{if(st.mode==='id'&&!answered)playQuestion()},250);
   if(st.mode==='sing'&&play)setStatus(`Find the ${NAME[st.target]}. Tap Hear target if you need it.`,'');
 }
-function playQuestion(){asked=true;syncButtons();if(!st.drone)tone(st.f0,0,2.2,.18);tone(tgtF(st.target),0,2.2,.22);
-  if(!answered)setStatus(`Which harmonic is this? Tap a tile${st.set.length<=9?` or press 1–${st.set.length}`:''}.`,'')}
+async function playQuestion(){const plays=[tone(tgtF(st.target),0,2.2,.22)];if(!st.drone)plays.push(tone(st.f0,0,2.2,.18));
+  const played=await Promise.all(plays);if(!played[0])return;
+  asked=true;syncButtons();if(!answered)setStatus(`Which harmonic is this? Tap a tile${st.set.length<=9?` or press 1–${st.set.length}`:''}.`,'')}
 // after answering, a tile plays its own harmonic over the root so you can compare
 function playCompare(n){if(!st.drone)tone(st.f0,0,1.8,.16);tone(tgtF(n),0,1.8,.2)}
 function bump(n,k,v){const s=st.stats[n]||(st.stats[n]={hits:0,err:0,ok:0,tot:0});s[k]+=v}
@@ -488,7 +519,7 @@ function syncVoice(){$('f0').value=st.f0;$('voice').value=VO.includes(String(st.
 $('voice').onchange=e=>{if(e.target.value==='custom'){$('f0').focus();return}st.f0=+e.target.value;$('f0').value=st.f0;resetTracking();if(droneN){setDrone(false);setDrone(true)}showTarget();save()};
 $('f0').onchange=e=>{const v=+e.target.value;if(v>=55&&v<=500){st.f0=v;syncVoice();resetTracking();if(droneN){setDrone(false);setDrone(true)}showTarget();save()}else e.target.value=st.f0};
 $('tol').value=st.tol;$('tol').onchange=e=>{st.tol=+e.target.value;save()};
-$('vol').value=st.vol;$('vol').oninput=e=>{st.vol=+e.target.value;if(master)master.gain.value=st.vol;save()};
+$('vol').value=st.vol;$('vol').oninput=e=>{st.vol=+e.target.value;if(master)master.gain.value=st.vol*GAIN_TRIM;save()};
 $('droneBtn').onclick=()=>setDrone(!st.drone);
 $('micBtn').onclick=()=>{if(micOn){disableMic();setStatus('Microphone off. Enable it to sing again.','')}else enableMic()};
 // the microphone and drone never keep running behind a hidden tab
@@ -546,7 +577,7 @@ function drawTrace(now,cur){
 let lastT=performance.now(),lastTxt=0,lastVoice=0;const VW=[];
 function loop(now){
   const dt=Math.min(100,now-lastT);lastT=now;let cur=null;
-  if(micOn&&st.mode!=='id'){
+  if(micOn&&ac?.state==='running'&&st.mode!=='id'){
     const raw=detect(now);
     if(raw!==null){
       // the trace shows the live pitch; the meter and scoring use a 320 ms average so vibrato doesn't wobble the verdict
