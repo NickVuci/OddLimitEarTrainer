@@ -455,6 +455,35 @@ body.calm *,body.calm *::before,body.calm *::after{animation:none!important;tran
 .duelvs .bighex{width:62px;height:72px}.duelvs .bighex b{font-size:15px}
 .sinfo .leave{align-self:flex-start;margin-top:6px;background:transparent;border:1px solid var(--burgundy-soft);color:var(--ink-muted);font-family:var(--font-sans);font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:2px;cursor:pointer}
 @media (max-width:640px){.duelvs .bighex{width:52px;height:60px}.duelvs .bighex b{font-size:13px}.duelvs em{font-size:15px}.suggest{flex-wrap:wrap}.sacts{margin-left:auto}}
+/* sing it: match an interval over a root drone, and watch your pitch against the ratio lines */
+.ctrlbar-in{grid-template-columns:minmax(0,1fr) 96px}
+body.singing #choices,body.singing #status,body.singing #stage .prog,body.singing #stage .desc{display:none}
+body.singing .shead{height:auto;min-height:110px}
+.singpanel{gap:12px}
+.sghead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.sgsel{font:inherit;font-size:13px;background:var(--surface-raised);color:var(--ink);border:1px solid var(--hairline);border-radius:2px;padding:7px 8px;min-width:0;max-width:100%}
+.sgtip{margin:0;font-size:13.5px;line-height:1.5;color:var(--ink)}
+.sgtip .m,.sgnote .m{font-family:var(--font-mono);font-weight:500}
+.sgrow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.sgrow label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-muted)}
+.ghost.sgbtn{height:36px;padding:4px 12px;display:inline-flex;align-items:center;gap:8px}
+:root .ghost.sgbtn[aria-pressed="true"]{background:var(--blue);color:var(--on-blue);border-color:var(--blue)}
+.sglvl{width:34px;height:5px;background:var(--burgundy-soft);overflow:hidden;flex:none}
+.sglvl i{display:block;height:100%;width:0;background:var(--gold)}
+.sgtrace{position:relative;height:clamp(180px,30vh,250px);background:var(--surface-sunk);border:1px solid var(--burgundy-soft);border-radius:2px;overflow:hidden}
+.sgtrace canvas{position:absolute;inset:0;width:100%;height:100%}
+.sgmeter{position:relative;height:38px;background:var(--surface-sunk);border:1px solid var(--burgundy-soft);border-radius:2px;overflow:hidden}
+.sgmeter .zone{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--gold) 26%,transparent)}
+.sgmeter .mid{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--gold)}
+.sgmeter .tick{position:absolute;bottom:0;width:1px;height:8px;background:var(--hairline)}
+.sgmeter .tl{position:absolute;top:2px;font-family:var(--font-mono);font-size:10px;color:var(--ink-muted);transform:translateX(-50%)}
+.sgneedle{position:absolute;top:6px;bottom:6px;width:6px;margin-left:-3px;border-radius:3px;background:var(--ink);left:50%;opacity:.25;transition:left .06s linear,opacity .2s}
+.sgneedle.ok{background:var(--gold)}
+.sgread{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-family:var(--font-mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.sgread span:last-child{color:var(--ink-muted);text-align:right}
+.sgnote{margin:0;font-size:13px;line-height:1.45;color:var(--ink-muted);background:var(--burgundy-wash);border:1px solid var(--burgundy-soft);border-radius:2px;padding:9px 12px}
+.sgnote b{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.sgneedle{transition:none}}
 </style>
 
 <header class="hud">
@@ -475,6 +504,24 @@ body.calm *,body.calm *::before,body.calm *::after{animation:none!important;tran
       <div class="shead" id="shead"></div>
       <div class="prog" id="sprog"></div>
     </section>
+    <section class="panel singpanel" id="singpanel" aria-label="Sing the interval" hidden>
+      <div class="sghead"><span class="eyebrow">Sing it</span>
+        <select class="sgsel" id="sgTarget" aria-label="Interval to sing"></select></div>
+      <p class="sgtip" id="sgTip"></p>
+      <div class="sgrow">
+        <label for="sgVoice">Root note
+          <select class="sgsel" id="sgVoice"><option value="98">G2 · 98 Hz</option><option value="130.81">C3 · 131 Hz</option><option value="146.83">D3 · 147 Hz</option><option value="196">G3 · 196 Hz</option><option value="261.63">C4 · 262 Hz</option></select></label>
+        <label for="sgTol">Tolerance
+          <select class="sgsel" id="sgTol"><option value="5">±5¢</option><option value="10">±10¢</option><option value="15">±15¢</option><option value="25">±25¢</option></select></label>
+        <button type="button" class="ghost sgbtn" id="sgDrone" aria-pressed="false">Root drone</button>
+        <button type="button" class="ghost sgbtn" id="sgMic" aria-pressed="false"><span id="sgMicTxt">Enable microphone</span><span class="sglvl"><i id="sgLvl"></i></span></button>
+      </div>
+      <div class="sgtrace"><canvas id="sgCv" aria-label="Your sung pitch over the last eight seconds against the interval's ratio line"></canvas></div>
+      <div class="sgmeter" id="sgMeter" aria-hidden="true"><div class="zone" id="sgZone"></div><div class="mid"></div><div class="sgneedle" id="sgNeedle"></div></div>
+      <div class="mbar" aria-hidden="true"><i id="sgHold"></i></div>
+      <div class="sgread"><span id="sgYou">You: —</span><span id="sgDir">Waiting for your voice</span></div>
+      <p class="sgnote" id="sgNote">Press <b>Hear it</b> to hear the interval, then sing the upper note over the root. Any octave counts. Headphones keep the drone out of the microphone.</p>
+    </section>
     <div class="choices" id="choices"></div>
     <div class="status" id="status" hidden></div>
     <div class="suggest" id="suggest" hidden><p id="suggestText"></p><div class="sacts"><button class="sgo" id="suggestGo">Duel</button><button class="sno" id="suggestNo">Not now</button></div></div>
@@ -484,6 +531,7 @@ body.calm *,body.calm *::before,body.calm *::after{animation:none!important;tran
 <footer class="ctrlbar">
   <div class="ctrlbar-in">
     <button class="playbtn" id="play"><span class="disc"><svg viewBox="0 0 12 14" fill="currentColor"><path d="M0 0l12 7-12 7z"/></svg></span><span id="playLabel">Play</span></button>
+    <button type="button" class="ghost" id="singBtn" aria-pressed="false" title="Sing the interval instead of naming it"><span id="singBtnTxt">Sing</span></button>
   </div>
 </footer>
 <div id="toasts"></div>
@@ -662,9 +710,10 @@ function audio(){
     waves.voice=mk(k=>{const f=k*220,g=(c,w)=>Math.exp(-Math.pow((f-c)/w,2));return Math.pow(k,-.6)*(g(730,220)+.7*g(1090,260)+.3*g(2440,400)+.08)},25);
     waves.buzzy=mk(k=>1/k,41);
     wave=waves.bright;
+    ctx.onstatechange=()=>{if(ctx.state!=="running"&&ctx.state!=="closed")ctx.resume().catch(()=>{})};   // a browser can suspend output when the mic opens; keep it playing
     master=ctx.createGain();master.gain.value=0.5;
     const lp=ctx.createBiquadFilter();lp.type="lowpass";lp.frequency.value=4200;master.connect(lp);lp.connect(ctx.destination)}
-  if(ctx.state==="suspended")ctx.resume();
+  if(ctx.state!=="running")ctx.resume();
   return ctx;
 }
 function stopAll(){if(!ctx)return;const t=ctx.currentTime;live.forEach(({o,g})=>{try{g.gain.cancelScheduledValues(t);g.gain.setTargetAtTime(0,t,0.02);o.stop(t+0.15)}catch(e){}});live=[]}
@@ -789,6 +838,7 @@ function goTo(s,intro){
   $("status").innerHTML=intro||(st.type==="r"
     ? (s<P.done?`Mastered. Practise it against every ratio you know, or tap the hexagon to hear it from new notes.`:stepText(s))
     : (s<P.done?`Mastered. Practise the whole limit as long as you like.`:`Every ratio you have learned up to the ${st.L}-odd-limit. Press <b>Play</b> to begin.`));
+  if(SG.on){clearTimeout(SG.advT);sgRefresh()}   // moving along the path while singing retargets to the new stage
 }
 
 function candidates(target){
@@ -921,6 +971,7 @@ function toast(t,s){
 }
 
 $("play").addEventListener("click",()=>{
+  if(SG.on){sgHear();return}
   if(D&&R&&R.duelWon){endDuel();return}
   if(inCross()){crossPlay();return}
   if(inTransp()){transpPlay();return}
@@ -931,6 +982,7 @@ $("play").addEventListener("click",()=>{
   idleNext=false;newRound();
 });
 $("shead").addEventListener("click",e=>{
+  if(SG.on){if(e.target.closest(".bighex,.biglat"))sgHear();return}
   if(e.target.closest("#leaveDuel")){endDuel();return}
   const hx=e.target.closest("[data-hear]");
   if(hx){timbre=tbase();if(!R||R.answered)root=hexRoot();const dd=play(map.get(hx.dataset.hear),(R&&R.answered===false)?curMode:pickMode());hexFlip(hx,dd);return}
@@ -979,8 +1031,10 @@ $("path").addEventListener("click",e=>{const b=e.target.closest(".node");if(!b||
 document.addEventListener("keydown",e=>{
   if(e.metaKey||e.ctrlKey||e.altKey)return;
   if(openSheet){if(e.key==="Escape")closeSheets();return}
-  if(e.key===" "||e.key==="Enter"){if(document.activeElement&&document.activeElement.tagName==="BUTTON"&&e.key==="Enter")return;e.preventDefault();$("play").click();return}
-  const n=+e.key;if(n>=1&&n<=9){const b=document.querySelectorAll(".choice")[n-1];if(b&&!b.classList.contains("idle"))answer(b.dataset.k,b)}
+  const tg=document.activeElement&&document.activeElement.tagName;
+  if(tg==="SELECT")return;   // let the keyboard operate a focused dropdown
+  if(e.key===" "||e.key==="Enter"){if(tg==="BUTTON"&&e.key==="Enter")return;e.preventDefault();$("play").click();return}
+  const n=+e.key;if(!SG.on&&n>=1&&n<=9){const b=document.querySelectorAll(".choice")[n-1];if(b&&!b.classList.contains("idle"))answer(b.dataset.k,b)}
 });
 
 // ---- Cross-Presentation bridge ----
@@ -1264,6 +1318,7 @@ function suggestPair(pk,n){
   $("suggest").hidden=false;
 }
 function startDuel(a,b){
+  if(SG.on)sgExit(false);
   const back=P.cur;goTo(back);
   [a,b]=pairKey(a,b).split("|");
   D={a,b,streak:0,need:S.duelNeed,bag:[]};R=null;
@@ -1318,6 +1373,244 @@ function devApply(s,id){
 $("devsec").addEventListener("change",e=>devApply(P.cur,e.target.value));
 $("devskip").addEventListener("click",()=>{const s=P.cur,secs=devSections(s),i=secs.findIndex(x=>x.id===devCurrent(s));
   const nx=secs[Math.min(i+1,secs.length-1)];devApply(s,nx.id);$("toasts").innerHTML="";toast("Section marked complete",nx.id==="done"?"Stage mastered.":`Now: ${nx.label}.`)});
+// ---- Sing it: match an interval over a root drone and watch it against the ratio lines ----
+// A warm-up for recognition: singing an interval makes its size physical before you have to name it.
+// It never touches path progress. The pitch is folded into one octave above the root, so any octave counts.
+/*SING-ENGINE-START*/
+function makeTracker(){
+  const DB=new Float32Array(2048),DF=new Float32Array(600);
+  let gate=.006,floor=.003;
+  const TR={voiced:false,sm:0,lastV:0,cand:null,candN:0};
+  // YIN on a window decimated to at most 24 kHz; the lag search covers 55-1200 Hz
+  function yin(buf,sr,dec){
+    for(let i=0;i<2048;i++){let s=0;for(let j=0;j<dec;j++)s+=buf[i*dec+j];DB[i]=s/dec}
+    const N=2048,W=1200;let rms=0;for(let i=0;i<N;i++)rms+=DB[i]*DB[i];rms=Math.sqrt(rms/N);
+    if(rms<gate)return{rms};
+    const lo=Math.max(2,Math.floor(sr/1200)),hi=Math.min(598,Math.ceil(sr/55));
+    DF[0]=1;let run=0;
+    for(let t=1;t<=hi+1;t++){let s=0;for(let i=0;i<W;i++){const x=DB[i]-DB[i+t];s+=x*x}run+=s;DF[t]=run?s*t/run:1}
+    let T=-1;
+    for(let t=lo;t<hi;t++){if(DF[t]<.15){while(t+1<hi&&DF[t+1]<DF[t])t++;T=t;break}}
+    if(T<0){let m=1;for(let t=lo;t<hi;t++)if(DF[t]<m){m=DF[t];T=t}if(m>.3)return{rms}}
+    const x0=DF[T-1],x1=DF[T],x2=DF[T+1],den=x0+x2-2*x1,sh=den>0?(x0-x2)/(2*den):0;
+    return{f:sr/(T+Math.max(-1,Math.min(1,sh))),rms,conf:1-x1};
+  }
+  // noise-adaptive gate, onset confirmation, octave-jump rejection, adaptive smoothing.
+  // Returns {rms, c}: c is smoothed cents above rootHz, or null when there is no confirmed voice.
+  function step(buf,sr,dec,now,rootHz){
+    const r=yin(buf,sr/dec,dec);
+    if(!r.f||r.conf<.7){
+      if(!r.f){floor=floor*.97+r.rms*.03;gate=Math.max(.004,Math.min(.03,floor*2.8))}
+      if(TR.voiced&&now-TR.lastV>160)TR.voiced=false;
+      TR.cand=null;TR.candN=0;return{rms:r.rms,c:null};
+    }
+    const c=1200*Math.log2(r.f/rootHz);
+    if(!TR.voiced){
+      if(TR.cand!==null&&Math.abs(c-TR.cand)<45){if(++TR.candN>=2){TR.voiced=true;TR.sm=c;TR.cand=null;TR.candN=0}else TR.cand=c}
+      else{TR.cand=c;TR.candN=1}
+      if(!TR.voiced)return{rms:r.rms,c:null};
+    }else{
+      const d=c-TR.sm,ad=Math.abs(d);
+      if(ad>120){
+        const need=Math.abs(ad-1200)<80||Math.abs(ad-700)<60?4:2;
+        if(TR.cand!==null&&Math.abs(c-TR.cand)<45){if(++TR.candN>=need){TR.sm=c;TR.cand=null;TR.candN=0}else TR.cand=c}
+        else{TR.cand=c;TR.candN=1}
+        if(TR.cand!==null){TR.lastV=now;return{rms:r.rms,c:null}}
+      }else{TR.cand=null;TR.candN=0;TR.sm+=Math.min(.85,Math.max(.12,ad/60))*d}
+    }
+    TR.lastV=now;return{rms:r.rms,c:TR.sm};
+  }
+  function reset(){TR.voiced=false;TR.sm=0;TR.lastV=0;TR.cand=null;TR.candN=0;gate=.006;floor=.003}
+  return{step,reset};
+}
+/*SING-ENGINE-END*/
+const SG={on:false,sel:"*",key:null,keys:[],raf:0,last:0,armed:true,hold:0,errAcc:0,errN:0,lastVoice:0,blocked:0,paused:0,drone:null,advT:0,txt:0,vw:[],trail:[],
+  mic:{on:false,pending:false,epoch:0,ctx:null,stream:null,nodes:null,an:null,buf:null,dec:2},tr:makeTracker()};
+const SG_ROOTS=[98,130.81,146.83,196,261.63];
+S.sgRoot=SG_ROOTS.includes(+S.sgRoot)?+S.sgRoot:130.81;
+S.sgTol=[5,10,15,25].includes(+S.sgTol)?+S.sgTol:10;
+let SS={};try{SS=JSON.parse(localStorage.getItem("olet-path-sing")||"{}")||{}}catch(e){}
+if(typeof SS!=="object"||Array.isArray(SS))SS={};
+const saveSS=()=>{try{localStorage.setItem("olet-path-sing",JSON.stringify(SS))}catch(e){}};
+const sgTok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const sgWrap=c=>((c%1200)+1200)%1200;
+const sgDiff=(a,b)=>{let d=sgWrap(a-b);if(d>=600)d-=1200;return d};
+const sgFmt=x=>(x>=0?"+":"−")+Math.abs(x).toFixed(0);
+const sgFold=k=>k==="1/1"?0:map.get(k).cents%1200;
+const sgColor=k=>k==="1/1"?sgTok("--ink-muted"):sgTok("--prime-"+map.get(k).prime)||sgTok("--ink-muted");
+function sgKeys(){const st=STAGES[P.cur];
+  return (st.type==="r"?phKeys(P.cur,3):limitPool(st.L).map(i=>i.key)).filter(k=>k!=="2/1")}
+function sgRefresh(){
+  const st=STAGES[P.cur];SG.keys=sgKeys();SG.sel=st.type==="r"?st.key:"*";
+  $("sgTarget").innerHTML=`<option value="*">Any of these (random)</option>`+SG.keys.map(k=>`<option value="${k}">${k} · ${nameOf(map.get(k))}</option>`).join("");
+  $("sgTarget").value=SG.sel;SG.key=null;sgPick();setPlay("Hear it",false);
+}
+function sgPick(){
+  if(SG.sel==="*"){const pool=SG.keys.filter(k=>k!==SG.key);SG.key=pool[Math.floor(Math.random()*pool.length)]||SG.keys[0]}
+  else SG.key=SG.sel;
+  SG.hold=0;SG.errAcc=0;SG.errN=0;SG.armed=true;sgInfo();
+}
+function sgInfo(){
+  const iv=map.get(SG.key),s=SS[SG.key];
+  $("sgTip").innerHTML=`Sing <span class="m">${iv.key}</span>, the ${nameOf(iv)} (${iv.cents.toFixed(1)}¢), above the root. ${s&&s.n?`Matched ${s.n}× so far, ±${(s.err/s.n).toFixed(1)}¢ on average.`:"Hear it first, then find it with your voice."}`;
+}
+function sgNote(html){$("sgNote").innerHTML=html}
+function sgHear(){
+  audio();root=S.sgRoot;timbre=tbase();const d=play(map.get(SG.key),"harm");
+  SG.blocked=performance.now()+d*1000+500;hexFlip(document.querySelector(".bighex"),d);
+}
+function sgDrone(on){
+  if(on&&!SG.drone){audio();const t=ctx.currentTime,o=ctx.createOscillator(),g=ctx.createGain();o.setPeriodicWave(waves[tbase()]||wave);o.frequency.value=S.sgRoot;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.13,t+.4);o.connect(g);g.connect(master);o.start();SG.drone={o,g}}
+  else if(!on&&SG.drone){const t=ctx.currentTime,{o,g}=SG.drone;g.gain.setTargetAtTime(0,t,.08);o.stop(t+.5);SG.drone=null}
+  $("sgDrone").setAttribute("aria-pressed",String(!!SG.drone));SG.blocked=Math.max(SG.blocked,performance.now()+600);
+}
+function sgResetTrack(){SG.tr.reset();SG.vw.length=0;SG.trail.length=0;SG.hold=0;SG.errAcc=0;SG.errN=0;SG.lastVoice=0}
+async function sgMicOn(){
+  const m=SG.mic;if(m.on||m.pending)return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){sgMicNotice();return}
+  m.pending=true;$("sgMic").disabled=true;$("sgMicTxt").textContent="Connecting…";const epoch=++m.epoch;
+  try{
+    // the mic gets its own audio context: tying it to the playback context can stall or silence the output on some drivers
+    audio();const a=new (window.AudioContext||window.webkitAudioContext)();m.ctx=a;
+    const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    if(epoch!==m.epoch||!SG.on){s.getTracks().forEach(t=>t.stop());if(a.state!=="closed")a.close();return}
+    m.stream=s;
+    const src=a.createMediaStreamSource(s),hp=a.createBiquadFilter(),lp=a.createBiquadFilter(),an=a.createAnalyser();
+    hp.type="highpass";hp.frequency.value=65;hp.Q.value=.7;lp.type="lowpass";lp.frequency.value=1500;lp.Q.value=.7;
+    m.dec=Math.max(1,Math.ceil(a.sampleRate/24000));
+    an.fftSize=2**Math.ceil(Math.log2(2048*m.dec));an.smoothingTimeConstant=0;m.an=an;m.buf=new Float32Array(an.fftSize);
+    src.connect(hp);hp.connect(lp);lp.connect(an);m.nodes=[src,hp,lp,an];   // never connected to the output
+    s.getTracks().forEach(t=>t.onended=()=>{sgMicOff();sgNote("<b>Microphone disconnected.</b> Enable it to sing again.")});
+    if(a.state!=="running")a.resume();
+    m.on=true;sgResetTrack();$("sgMic").setAttribute("aria-pressed","true");$("sgMicTxt").textContent="Microphone on";
+    sgNote("Listening. Hear the interval, then sing it over the root. Headphones keep the drone out of the microphone. <b>If the app goes quiet or silent now,</b> your system is muting other sound while a mic is open. On Windows, press Win+R, run <span class=\"m\">mmsys.cpl</span>, and set the Communications tab to “Do nothing”. Also turn off the mic’s audio enhancements (Voice clarity) in Sound settings. If it still goes silent, some laptops mute the headphone jack while their built-in mic is in use: a USB mic or a headset mic avoids it.");
+  }catch(e){if(epoch===m.epoch){sgMicOff();sgMicNotice(e&&e.name)}}
+  finally{m.pending=false;$("sgMic").disabled=false;if(!m.on)$("sgMicTxt").textContent="Enable microphone"}
+}
+function sgMicOff(){
+  const m=SG.mic;m.epoch++;
+  if(m.stream){m.stream.getTracks().forEach(t=>{t.onended=null;t.stop()});m.stream=null}
+  if(m.nodes){m.nodes.forEach(n=>n.disconnect());m.nodes=null}
+  if(m.ctx){if(m.ctx.state!=="closed")m.ctx.close().catch(()=>{});m.ctx=null}
+  m.an=null;m.buf=null;m.on=false;sgResetTrack();
+  $("sgMic").setAttribute("aria-pressed","false");$("sgMicTxt").textContent="Enable microphone";$("sgLvl").style.width="0%";
+  $("sgNeedle").style.opacity=.25;$("sgYou").textContent="You: —";$("sgDir").textContent="Waiting for your voice";
+}
+function sgMicNotice(name){
+  sgNote(name==="NotAllowedError"
+    ?"<b>Microphone blocked.</b> Allow microphone access for this page in your browser settings, then try again. Naming intervals works without it."
+    :"<b>The microphone isn’t available.</b> Check the device, and open this page over HTTPS or on localhost in Chrome, Edge or Firefox. Naming intervals works without it.");
+}
+function sgDone(now){
+  const e=SG.errN?SG.errAcc/SG.errN:0,k=SG.key,o=SS[k]||(SS[k]={n:0,err:0});
+  o.n++;o.err+=Math.abs(e);saveSS();sfx("ok");
+  SG.hold=0;SG.errAcc=0;SG.errN=0;SG.paused=now+1600;SG.blocked=now+700;SG.armed=false;   // sing again only after leaving the pitch, so holding a note can't farm matches
+  sgNote(`<b>Matched</b> <span class="m">${k}</span>, average ${sgFmt(e)}¢. ${SG.sel==="*"?"Next interval coming up.":"Sing it again, or pick another."}`);
+  sgInfo();
+  if(SG.sel==="*"){clearTimeout(SG.advT);SG.advT=setTimeout(()=>{if(SG.on&&SG.sel==="*"){sgPick();sgHear();sgNote("New interval. Listen, then sing it.")}},1500)}
+}
+function sgLoop(now){
+  if(!SG.on)return;SG.raf=requestAnimationFrame(sgLoop);
+  const dt=Math.min(100,now-SG.last);SG.last=now;const m=SG.mic;let cur=null;
+  if(m.on&&m.an&&m.ctx){
+    m.an.getFloatTimeDomainData(m.buf);
+    const r=SG.tr.step(m.buf,m.ctx.sampleRate,m.dec,now,S.sgRoot);
+    $("sgLvl").style.width=Math.min(100,r.rms*700)+"%";
+    if(r.c!==null){
+      // the trace shows the live pitch; the meter and scoring use a 320 ms average so vibrato doesn't wobble the verdict
+      if(SG.vw.length&&Math.abs(r.c-SG.vw[SG.vw.length-1].c)>120)SG.vw.length=0;
+      SG.vw.push({t:now,c:r.c});while(SG.vw.length&&now-SG.vw[0].t>320)SG.vw.shift();
+      const c=sgWrap(SG.vw.reduce((a,p)=>a+p.c,0)/SG.vw.length),tc=sgFold(SG.key),dev=sgDiff(c,tc),ok=Math.abs(dev)<=S.sgTol;
+      let near="1/1",nd=Math.abs(sgDiff(c,0));
+      for(const k of SG.keys){const d=Math.abs(sgDiff(c,sgFold(k)));if(d<nd){nd=d;near=k}}
+      cur={c,near,nd,dev,ok};SG.trail.push({t:now,c:sgWrap(r.c),ok});
+      if(now-SG.txt>110){SG.txt=now;
+        $("sgYou").textContent=`You: ${Math.round(c)}¢`+(near!==SG.key&&nd<=40?` · closest ${near} (${sgFmt(sgDiff(c,sgFold(near)))}¢)`:"");
+        $("sgDir").textContent=now<SG.blocked?"Listen to the cue, then sing":ok?"In tune, hold it":Math.abs(dev)>150?(dev>0?"Far too high":"Far too low"):(dev>0?`${sgFmt(dev)}¢ · sing lower`:`${sgFmt(dev)}¢ · sing higher`);
+      }
+      const nd2=$("sgNeedle");nd2.style.left=(50+Math.max(-50,Math.min(50,dev)))+"%";nd2.style.opacity=1;nd2.classList.toggle("ok",ok);
+      if(!ok&&now>SG.paused)SG.armed=true;
+      if(now>SG.paused&&SG.armed){
+        if(now<SG.blocked){SG.hold=0;SG.errAcc=0;SG.errN=0}
+        else if(ok){SG.hold+=dt;SG.errAcc+=dev;SG.errN++}
+        else{SG.hold=Math.max(0,SG.hold-dt*1.5);if(!SG.hold){SG.errAcc=0;SG.errN=0}}   // drain rather than zero: one wobble doesn't cost the whole hold
+        if(SG.hold>=900)sgDone(now);
+      }
+      SG.lastVoice=now;
+    }else if(now-SG.lastVoice>300){   // short dropouts (consonants, breaths) are forgiven
+      $("sgNeedle").style.opacity=.25;if(now>SG.paused)SG.armed=true;
+      if(now-SG.txt>110){SG.txt=now;$("sgDir").textContent="Waiting for your voice"}
+      SG.hold=Math.max(0,SG.hold-dt*1.5);if(!SG.hold){SG.errAcc=0;SG.errN=0}
+    }
+  }
+  $("sgHold").style.width=Math.min(100,SG.hold/9)+"%";
+  sgDraw(now,cur);
+}
+function sgDraw(now,cur){
+  const cv=$("sgCv"),g=cv.getContext("2d"),dpr=window.devicePixelRatio||1,W=cv.clientWidth,Hh=cv.clientHeight;if(!W)return;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(Hh*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(Hh*dpr)}
+  g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,Hh);
+  const L=56,R=12,T=14,B=14,w=W-L-R,h=Hh-T-B,y=c=>T+(1-c/1200)*h;
+  const ink=sgTok("--ink"),mute=sgTok("--ink-muted"),grid=sgTok("--hairline"),good=sgTok("--gold"),panel=sgTok("--surface-raised");
+  g.font=`500 11px ${sgTok("--font-mono")}`;g.textBaseline="middle";g.textAlign="left";
+  g.strokeStyle=grid;g.lineWidth=1;[0,1200].forEach(c=>{g.beginPath();g.moveTo(L,y(c));g.lineTo(L+w,y(c));g.stroke()});
+  g.fillStyle=mute;g.fillText("1/1",8,y(0));g.fillText("2/1",8,y(1200));
+  // the target's tolerance band
+  const tc=sgFold(SG.key);g.fillStyle=good;g.globalAlpha=.2;
+  g.fillRect(L,y(Math.min(1200,tc+S.sgTol)),w,y(Math.max(0,tc-S.sgTol))-y(Math.min(1200,tc+S.sgTol)));g.globalAlpha=1;
+  // ratio lines: all of them for a short list; for a long one only the target and the nearest, with ticks for the rest
+  const few=SG.keys.length<=14,labels=[];
+  for(const k of SG.keys){
+    const isT=k===SG.key,isN=!!cur&&cur.near===k&&cur.nd<=40;
+    if(!few&&!isT&&!isN){g.strokeStyle=mute;g.globalAlpha=.5;g.beginPath();g.moveTo(L-6,y(sgFold(k)));g.lineTo(L,y(sgFold(k)));g.stroke();g.globalAlpha=1;continue}
+    const c=sgFold(k),col=sgColor(k);
+    g.strokeStyle=col;g.lineWidth=isT||isN?2.4:1.2;g.globalAlpha=isT||isN?1:.65;g.setLineDash(isT?[]:[5,4]);
+    g.beginPath();g.moveTo(L,y(c));g.lineTo(L+w,y(c));g.stroke();g.setLineDash([]);g.globalAlpha=1;
+    labels.push({k,col,yy:y(c),pri:isT?2:isN?1:0});
+  }
+  const placed=[];labels.sort((a,b)=>b.pri-a.pri||a.yy-b.yy);
+  for(const l of labels){if(placed.some(yy=>Math.abs(yy-l.yy)<14))continue;g.fillStyle=l.col;g.fillText(l.k,8,l.yy,L-14);placed.push(l.yy)}
+  // your pitch
+  const span=8000;while(SG.trail.length&&now-SG.trail[0].t>span)SG.trail.shift();
+  let prev=null;
+  for(const p of SG.trail){
+    const x=L+w-(now-p.t)/span*w,yy=y(p.c);
+    if(prev&&p.t-prev.t<160&&Math.abs(p.c-prev.c)<600){g.strokeStyle=p.ok?good:ink;g.globalAlpha=.6;g.lineWidth=2;g.beginPath();g.moveTo(prev.x,prev.y);g.lineTo(x,yy);g.stroke();g.globalAlpha=1}
+    p.x=x;p.y=yy;prev=p;
+  }
+  const last=SG.trail[SG.trail.length-1];
+  if(last&&now-last.t<200){g.beginPath();g.arc(last.x,last.y,6,0,Math.PI*2);g.fillStyle=last.ok?good:ink;g.fill();g.lineWidth=2;g.strokeStyle=panel;g.stroke()}
+  if(!SG.mic.on){g.fillStyle=mute;g.textAlign="center";g.font=`400 13px ${sgTok("--font-sans")}`;g.fillText("Enable the microphone to see your pitch",L+w/2,T+h/2,w-16);g.textAlign="left"}
+}
+function sgEnter(){
+  if(D){toast("Finish the duel first","Singing is available on the path, not inside a mix-up duel.");return}
+  SG.on=true;document.body.classList.add("singing");$("singpanel").hidden=false;
+  $("singBtn").setAttribute("aria-pressed","true");$("singBtnTxt").textContent="Quiz";
+  if(typeof stopSeq==="function")stopSeq();stopAll();
+  sgNote("Press <b>Hear it</b> to hear the interval, then sing the upper note over the root. Any octave counts. Headphones keep the drone out of the microphone.");
+  sgRefresh();SG.last=performance.now();SG.raf=requestAnimationFrame(sgLoop);
+}
+function sgExit(reset){
+  SG.on=false;cancelAnimationFrame(SG.raf);clearTimeout(SG.advT);
+  sgMicOff();sgDrone(false);
+  document.body.classList.remove("singing");$("singpanel").hidden=true;
+  $("singBtn").setAttribute("aria-pressed","false");$("singBtnTxt").textContent="Sing";
+  if(reset)goTo(P.cur);
+}
+$("singBtn").addEventListener("click",()=>SG.on?sgExit(true):sgEnter());
+$("sgTarget").addEventListener("change",e=>{SG.sel=e.target.value;clearTimeout(SG.advT);SG.key=null;sgPick();SG.paused=0;sgNote("Press <b>Hear it</b>, then sing it over the root.")});
+$("sgVoice").value=S.sgRoot;$("sgTol").value=S.sgTol;
+$("sgVoice").addEventListener("change",e=>{S.sgRoot=+e.target.value;saveS();sgResetTrack();if(SG.drone){sgDrone(false);sgDrone(true)}});
+$("sgTol").addEventListener("change",e=>{S.sgTol=+e.target.value;saveS();$("sgZone").style.left=(50-S.sgTol)+"%";$("sgZone").style.width=(2*S.sgTol)+"%"});
+$("sgDrone").addEventListener("click",()=>sgDrone(!SG.drone));
+$("sgMic").addEventListener("click",()=>{if(SG.mic.on){sgMicOff();sgNote("Microphone off. Enable it to sing again.")}else sgMicOn()});
+$("sgZone").style.left=(50-S.sgTol)+"%";$("sgZone").style.width=(2*S.sgTol)+"%";
+(()=>{const m=$("sgMeter");let h="";for(const c of[-50,-25,0,25,50]){const x=50+c;h+=`<span class="tick" style="left:${x}%"></span>`;if(c)h+=`<span class="tl" style="left:${Math.min(96,Math.max(4,x))}%">${c>0?"+":""}${c}</span>`}m.insertAdjacentHTML("beforeend",h)})();
+// the microphone and drone never keep running behind a hidden tab
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&SG.on){sgMicOff();sgDrone(false);sgNote("Paused while the tab was hidden. Enable the microphone to sing again.")}});
+addEventListener("pagehide",()=>{if(SG.on){sgMicOff();sgDrone(false)}});
+
 renderDev();
 markOpts();
 

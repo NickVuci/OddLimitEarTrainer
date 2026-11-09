@@ -1,11 +1,12 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<script>try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
-<title>Harmonic Ear Trainer</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Harmonic Ear Trainer</title>
+<script>try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Montserrat:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: practice stand — target card + live pitch trace side by side, harmonic set below */
 :root{
@@ -27,10 +28,11 @@
   --good:#4FCB7E; --bad:#F06B5B; --sel-ink:#0C1216; color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{background:var(--bg)}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 32px}
-.app{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.app{max-width:1180px;margin:18px auto 0;display:flex;flex-direction:column;gap:14px}
 h1,h2{font-family:var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
 h1{font-size:clamp(26px,4vw,36px);line-height:1}
 h2{font-size:16px}
@@ -55,6 +57,7 @@ label.ctl{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mut
 .tabs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;align-self:flex-start;background:var(--panel)}
 .tabs button{border:0;border-radius:0;padding:9px 16px;font-weight:700}
 .tabs button+button{border-left:1px solid var(--line)}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--sel-ink)}
 .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px}
 .pad{padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
@@ -88,6 +91,8 @@ label.ctl{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mut
 .choice.right{background:var(--good);border-color:var(--good);color:var(--sel-ink)}
 .choice.wrong{background:var(--bad);border-color:var(--bad);color:var(--sel-ink)}
 .choice.right small,.choice.wrong small{color:var(--sel-ink)}
+.choices.answered .choice:not(.right):not(.wrong){opacity:.7}
+.choices.answered .choice{cursor:pointer}
 .trace{display:flex;flex-direction:column;min-width:0}
 .trace-wrap{position:relative;flex:1;min-height:360px;background:var(--well);border-radius:10px 10px 0 0;overflow:hidden}
 canvas#trace{position:absolute;inset:0;width:100%;height:100%}
@@ -98,14 +103,16 @@ canvas#trace{position:absolute;inset:0;width:100%;height:100%}
 .hchip .hn{grid-row:1/3;font-family:var(--f-display);font-weight:700;font-size:22px;line-height:1;color:var(--c);min-width:1.6ch;text-align:right}
 .hchip .hr{font-family:var(--f-mono);font-size:12px}
 .hchip .hs{font-family:var(--f-mono);font-size:10.5px;color:var(--mute)}
-.hchip[aria-pressed="true"]{background:var(--ink);color:var(--sel-ink);border-color:var(--c)}
-.hchip[aria-pressed="true"] .hs{color:var(--sel-ink);opacity:.75}
+/* a harmonic in the training set is tinted with its own colour; one left out is dimmed */
+.hchip{opacity:.55}
+.hchip:hover{opacity:.85}
+.hchip[aria-pressed="true"]{opacity:1;background:color-mix(in srgb,var(--c) 18%,var(--panel));color:var(--ink);border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c)}
+.hchip[aria-pressed="true"] .hs{color:var(--mute)}
 .notice{font-size:13px;color:var(--mute);margin:0;padding:10px 12px;border:1px dashed var(--line);border-radius:8px}
 .notice b{color:var(--ink)}
 @media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}.trace-wrap{min-height:300px}.tn{font-size:68px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Montserrat:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style id="nv-brand">
 /* Nick Vuci house style: Ivory (light) and Nocturne (dark, the original nickvuci.com palette).
    The applet's own variables are mapped onto the design-system tokens below. */
@@ -150,12 +157,12 @@ h2,h3{color:var(--nv-burgundy-ink)}
 
 </style>
 
+</head><body>
 <div class="nv-appbar" role="banner"><div class="nv-in"><a class="nv-lock" href="https://nickvuci.com" target="_blank" rel="noopener" aria-label="Nick Vuci — nickvuci.com"><svg class="nv-mark" viewBox="-7.75 0 205.50 80" role="img" aria-label="Nick Vuci"><defs><clipPath id="nvc"><rect x="-9.75" y="0" width="209.50" height="80"/></clipPath><polyline id="nvz" points="-20.50,106.19 0.00,71.84 38.00,8.16 76.00,71.84 114.00,8.16 152.00,71.84 190.00,8.16 210.50,-26.19" fill="none" stroke-width="7.0" stroke-linejoin="miter" stroke-miterlimit="10"/><clipPath id="nvf0"><polygon points="114.00,16.31 106.69,-43.24 217.75,-60.00 217.75,100.00 114.00,100.00"/></clipPath><clipPath id="nvf1"><polygon points="114.00,16.31 107.90,-43.37 217.75,-60.00 217.75,100.00 114.00,100.00"/></clipPath><clipPath id="nvf2"><polygon points="114.00,16.31 109.12,-43.49 217.75,-60.00 217.75,100.00 114.00,100.00"/></clipPath><clipPath id="nvf3"><polygon points="114.00,16.31 110.34,-43.57 217.75,-60.00 217.75,100.00 114.00,100.00"/></clipPath><clipPath id="nvf4"><polygon points="114.00,16.31 111.56,-43.64 217.75,-60.00 217.75,100.00 114.00,100.00"/></clipPath><clipPath id="nvf5"><polygon points="114.00,16.31 112.78,-43.67 217.75,-60.00 217.75,100.00 114.00,100.00"/></clipPath><clipPath id="nvf6"><polygon points="114.00,16.31 114.00,-43.69 217.75,-60.00 217.75,100.00 114.00,100.00"/></clipPath><clipPath id="nvf7"><polygon points="114.00,16.31 115.22,-43.67 217.75,-60.00 217.75,100.00 114.00,100.00"/></clipPath><clipPath id="nvf8"><polygon points="114.00,16.31 116.44,-43.64 217.75,-60.00 217.75,100.00 114.00,100.00"/></clipPath><clipPath id="nvf9"><polygon points="114.00,16.31 117.66,-43.57 217.75,-60.00 217.75,100.00 114.00,100.00"/></clipPath><clipPath id="nvf10"><polygon points="114.00,16.31 118.88,-43.49 217.75,-60.00 217.75,100.00 114.00,100.00"/></clipPath><clipPath id="nvf11"><polygon points="114.00,16.31 120.10,-43.37 217.75,-60.00 217.75,100.00 114.00,100.00"/></clipPath><clipPath id="nvf12"><polygon points="114.00,16.31 121.31,-43.24 217.75,-60.00 217.75,100.00 114.00,100.00"/></clipPath></defs><g clip-path="url(#nvc)"><use href="#nvz" style="stroke:var(--nv-brand-blue)"/><g clip-path="url(#nvf0)"><use href="#nvz" style="stroke:color-mix(in srgb,var(--nv-gold) 4.2%,var(--nv-brand-blue))"/></g><g clip-path="url(#nvf1)"><use href="#nvz" style="stroke:color-mix(in srgb,var(--nv-gold) 12.5%,var(--nv-brand-blue))"/></g><g clip-path="url(#nvf2)"><use href="#nvz" style="stroke:color-mix(in srgb,var(--nv-gold) 20.8%,var(--nv-brand-blue))"/></g><g clip-path="url(#nvf3)"><use href="#nvz" style="stroke:color-mix(in srgb,var(--nv-gold) 29.2%,var(--nv-brand-blue))"/></g><g clip-path="url(#nvf4)"><use href="#nvz" style="stroke:color-mix(in srgb,var(--nv-gold) 37.5%,var(--nv-brand-blue))"/></g><g clip-path="url(#nvf5)"><use href="#nvz" style="stroke:color-mix(in srgb,var(--nv-gold) 45.8%,var(--nv-brand-blue))"/></g><g clip-path="url(#nvf6)"><use href="#nvz" style="stroke:color-mix(in srgb,var(--nv-gold) 54.2%,var(--nv-brand-blue))"/></g><g clip-path="url(#nvf7)"><use href="#nvz" style="stroke:color-mix(in srgb,var(--nv-gold) 62.5%,var(--nv-brand-blue))"/></g><g clip-path="url(#nvf8)"><use href="#nvz" style="stroke:color-mix(in srgb,var(--nv-gold) 70.8%,var(--nv-brand-blue))"/></g><g clip-path="url(#nvf9)"><use href="#nvz" style="stroke:color-mix(in srgb,var(--nv-gold) 79.2%,var(--nv-brand-blue))"/></g><g clip-path="url(#nvf10)"><use href="#nvz" style="stroke:color-mix(in srgb,var(--nv-gold) 87.5%,var(--nv-brand-blue))"/></g><g clip-path="url(#nvf11)"><use href="#nvz" style="stroke:color-mix(in srgb,var(--nv-gold) 95.8%,var(--nv-brand-blue))"/></g><g clip-path="url(#nvf12)"><use href="#nvz" style="stroke:var(--nv-gold)"/></g></g></svg><span class="nv-wm"><span class="n">Nick</span> <span class="v">Vuci</span></span></a><h1 class="nv-name">Harmonic Ear Trainer</h1><button type="button" class="nv-theme" aria-label="Switch to dark theme" aria-pressed="false" title="Switch to dark theme"><svg class="nv-ti nv-ti-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M19.5 14.2A7.5 7.5 0 0 1 9.8 4.5a7.5 7.5 0 1 0 9.7 9.7Z"/></svg><svg class="nv-ti nv-ti-sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.6"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg></button></div></div>
 <div class="app">
   <header class="top">
     <div class="brand">
       <span class="eyebrow">Ear training · harmonic series</span>
-      <h2 class="nv-dup" aria-hidden="true" hidden>Harmonic Ear Trainer</h2>
       <p>Sing partials of the harmonic series against a 1/1 drone, or name them by ear. Any octave counts when you sing.</p>
     </div>
     <div class="toolbar">
@@ -169,7 +176,7 @@ h2,h3{color:var(--nv-burgundy-ink)}
           <option value="custom">Custom</option>
         </select>
       </label>
-      <label class="ctl" for="f0">1/1 <input id="f0" type="number" min="40" max="1000" step="0.01" value="130.81"> Hz</label>
+      <label class="ctl" for="f0">1/1 <input id="f0" type="number" min="55" max="500" step="0.01" value="130.81"> Hz</label>
       <label class="ctl" for="tol">Tolerance
         <select id="tol"><option value="5">±5¢</option><option value="10">±10¢</option><option value="15">±15¢</option><option value="25">±25¢</option></select>
       </label>
@@ -215,11 +222,12 @@ h2,h3{color:var(--nv-burgundy-ink)}
       </div>
       <p class="status" id="status" role="status"></p>
       <p class="notice" id="notice" hidden></p>
+      <p class="notice" id="micTip" hidden><b>Sound cut out when the mic came on?</b> Your system is muting playback while a mic is open. On Windows, run <code>mmsys.cpl</code> and set the Communications tab to “Do nothing”. Some laptops mute the headphone jack whenever their built-in mic is in use; a USB or headset mic avoids that.</p>
     </section>
 
     <section class="card trace" aria-label="Pitch trace">
       <div class="trace-wrap" id="traceWrap"><canvas id="trace" aria-label="Your sung pitch over the last eight seconds against the selected harmonics"></canvas></div>
-      <div class="trace-cap">Your pitch over the last 8 seconds, folded into one octave above 1/1. Lines mark the harmonics you're training; green dots are in tune.</div>
+      <div class="trace-cap">Your pitch over the last 8 seconds, folded into one octave above 1/1. Dashed lines are the harmonics you're training. In Sing mode the solid line and shaded band mark the target, the dot is your latest pitch, and gold means in tune.</div>
     </section>
   </main>
 
@@ -258,53 +266,80 @@ const fmt=x=>(x>=0?'+':'−')+Math.abs(x).toFixed(0);
 /* ---------- state ---------- */
 const st={f0:130.81,tol:10,vol:.5,mode:'sing',set:[3,5,7],drone:false,score:0,streak:0,target:7,stats:{}};
 try{const s=JSON.parse(localStorage.getItem('harmtrainer')||'null');if(s)Object.assign(st,s,{drone:false})}catch(e){}
+st.f0=Number.isFinite(+st.f0)?Math.min(500,Math.max(55,+st.f0)):130.81;
+st.set=Array.isArray(st.set)?[...new Set(st.set.filter(n=>ODD.includes(n)))]:[3,5,7];
+if(![5,10,15,25].includes(+st.tol))st.tol=10;
+if(!['sing','id','free'].includes(st.mode))st.mode='sing';
+st.vol=Number.isFinite(+st.vol)?Math.min(1,Math.max(0,+st.vol)):.5;
+if(!st.stats||typeof st.stats!=='object'||Array.isArray(st.stats))st.stats={};
 const save=()=>{try{localStorage.setItem('harmtrainer',JSON.stringify({f0:st.f0,tol:st.tol,vol:st.vol,mode:st.mode,set:st.set,stats:st.stats}))}catch(e){}};
 if(!st.set.length)st.set=[3,5,7];
 if(!st.set.includes(st.target))st.target=st.set[0];
 
 /* ---------- audio out ---------- */
-let ac,master,wave,droneN=null;
+let ac,master,wave,droneN=null,scoreBlockedUntil=0;
 function audio(){
-  if(!ac){ac=new(window.AudioContext||window.webkitAudioContext)();master=ac.createGain();master.gain.value=st.vol;master.connect(ac.destination);
+  if(!ac){ac=new(window.AudioContext||window.webkitAudioContext)();ac.onstatechange=()=>{if(ac.state!=='running'&&ac.state!=='closed')ac.resume().catch(()=>{})};master=ac.createGain();master.gain.value=st.vol;master.connect(ac.destination);
     const N=8,re=new Float32Array(N),im=new Float32Array(N);[0,1,.32,.14,.08,.04,.02,.01].forEach((v,i)=>im[i]=v);wave=ac.createPeriodicWave(re,im)}
-  if(ac.state==='suspended')ac.resume();return ac;
+  if(ac.state!=='running')ac.resume();return ac;
 }
 function tone(f,when=0,dur=1.6,amp=.25){const a=audio(),t=a.currentTime+when+.01,o=a.createOscillator(),g=a.createGain();o.setPeriodicWave(wave);o.frequency.value=f;
+  scoreBlockedUntil=Math.max(scoreBlockedUntil,performance.now()+(when+dur+.6)*1000);
   g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(amp,t+.03);g.gain.setTargetAtTime(amp*.6,t+.1,.3);g.gain.setTargetAtTime(0,t+dur-.4,.15);o.connect(g).connect(master);o.start(t);o.stop(t+dur+.5)}
 function setDrone(on){const a=audio();
   if(on&&!droneN){const o=a.createOscillator(),g=a.createGain();o.setPeriodicWave(wave);o.frequency.value=st.f0;g.gain.setValueAtTime(0,a.currentTime);g.gain.linearRampToValueAtTime(.12,a.currentTime+.5);o.connect(g).connect(master);o.start();droneN={o,g}}
   else if(!on&&droneN){const{o,g}=droneN;g.gain.setTargetAtTime(0,a.currentTime,.1);o.stop(a.currentTime+.6);droneN=null}
-  st.drone=on;$('droneBtn').setAttribute('aria-pressed',String(on));
+  st.drone=on;scoreBlockedUntil=Math.max(scoreBlockedUntil,performance.now()+700);$('droneBtn').setAttribute('aria-pressed',String(on));
 }
 const tgtF=n=>st.f0*H(n).r;
 
 /* ---------- mic + pitch ---------- */
-let an,buf,micOn=false,micStream=null;
+let an,buf,micCtx=null,micOn=false,micStream=null,micNodes=null,micPending=false,micEpoch=0,decimation=2;
 async function enableMic(){
   const n=$('notice');
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){showNotice();return}
+  if(micPending||micOn)return;
+  micPending=true;$('micBtn').disabled=true;$('micTxt').textContent='Connecting…';
+  const epoch=++micEpoch;
   try{
-    const a=audio();
+    // the mic gets its own audio context: tying it to the playback context can stall or silence the output on some drivers
+    audio();const a=new(window.AudioContext||window.webkitAudioContext)();micCtx=a;
     const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    if(epoch!==micEpoch){s.getTracks().forEach(t=>t.stop());if(a.state!=='closed')a.close();return}
+    micStream=s;
     const src=a.createMediaStreamSource(s);
     const hp=a.createBiquadFilter();hp.type='highpass';hp.frequency.value=65;hp.Q.value=.7;
     const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1500;lp.Q.value=.7;
-    an=a.createAnalyser();an.fftSize=4096;an.smoothingTimeConstant=0;buf=new Float32Array(an.fftSize);
-    src.connect(hp);hp.connect(lp);lp.connect(an);micStream=s;
-    micOn=true;$('micTxt').textContent='Mic on';$('micBtn').setAttribute('aria-pressed','true');n.hidden=true;
-    setStatus('Listening. Headphones keep the drone out of the mic.','');
-  }catch(e){showNotice(e&&e.name)}
+    decimation=Math.max(1,Math.ceil(a.sampleRate/24000));
+    an=a.createAnalyser();an.fftSize=2**Math.ceil(Math.log2(2048*decimation));an.smoothingTimeConstant=0;buf=new Float32Array(an.fftSize);
+    src.connect(hp);hp.connect(lp);lp.connect(an);micNodes=[src,hp,lp,an];
+    s.getTracks().forEach(t=>t.onended=()=>{disableMic();setStatus('Microphone disconnected. Enable it to sing again.','bad')});
+    if(a.state!=='running')a.resume();micOn=true;$('micTxt').textContent='Turn microphone off';$('micBtn').setAttribute('aria-pressed','true');n.hidden=true;
+    resetTracking();
+    $('micTip').hidden=false;
+    setStatus(st.mode==='id'?'Microphone on. Identify mode is by ear, so it isn’t listening here.':st.mode==='free'?'Listening. Sing anything; the nearest selected harmonic lights up.':`Listening. Find the ${NAME[st.target]}. Headphones keep the drone out of the mic.`,'');
+  }catch(e){if(epoch===micEpoch){disableMic();showNotice(e&&e.name)}}
+  finally{micPending=false;$('micBtn').disabled=false;if(!micOn)$('micTxt').textContent='Enable microphone'}
+}
+function disableMic(){
+  micEpoch++;
+  if(micStream){micStream.getTracks().forEach(t=>{t.onended=null;t.stop()});micStream=null}
+  if(micNodes){micNodes.forEach(n=>n.disconnect());micNodes=null}
+  if(micCtx){if(micCtx.state!=='closed')micCtx.close().catch(()=>{});micCtx=null}
+  an=null;buf=null;micOn=false;resetTracking();$('micTip').hidden=true;
+  $('micTxt').textContent='Enable microphone';$('micBtn').setAttribute('aria-pressed','false');$('lvl').style.width='0%';
+  $('needle').style.opacity=.25;$('you').textContent='You: —';$('dir').textContent='Waiting for your voice';
 }
 function showNotice(name){
   const n=$('notice');n.hidden=false;
   n.innerHTML=name==='NotAllowedError'
     ?'<b>Microphone blocked.</b> Allow microphone access for this page in your browser settings, then try again. Identify mode works without it.'
-    :'<b>The microphone isn’t available in this view.</b> Open the downloaded file in Chrome, Edge or Firefox to sing. Identify mode works here without a mic.';
+    :'<b>The microphone isn’t available.</b> Check the device and open this page on localhost or HTTPS in Chrome, Edge or Firefox. Identify mode works without a mic.';
 }
-/* YIN on a 2x-decimated window; lag search limited to the singing range (55–1200 Hz) */
+/* YIN on a window decimated to at most 24 kHz; lag search covers 55–1200 Hz */
 const DB=new Float32Array(2048),DF=new Float32Array(600);
 function yin(sr){
-  for(let i=0;i<2048;i++)DB[i]=(buf[2*i]+buf[2*i+1])*.5;
+  for(let i=0;i<2048;i++){let sum=0;for(let j=0;j<decimation;j++)sum+=buf[i*decimation+j];DB[i]=sum/decimation}
   const N=2048,W=1200;let rms=0;for(let i=0;i<N;i++)rms+=DB[i]*DB[i];rms=Math.sqrt(rms/N);
   if(rms<gate)return{rms};
   const lo=Math.max(2,Math.floor(sr/1200)),hi=Math.min(598,Math.ceil(sr/55));
@@ -319,14 +354,19 @@ function yin(sr){
 /* tracker: noise-adaptive gate, onset confirmation, octave-jump rejection, adaptive smoothing */
 let gate=.006,floor=.003;
 const TR={voiced:false,sm:0,lastV:0,cand:null,candN:0};
+function resetTracking(){
+  TR.voiced=false;TR.sm=0;TR.lastV=0;TR.cand=null;TR.candN=0;
+  gate=.006;floor=.003;
+  VW.length=0;trail.length=0;hold=0;errAcc=0;errN=0;lastVoice=0;
+}
 function detect(now){
-  an.getFloatTimeDomainData(buf);const r=yin(ac.sampleRate/2);
+  an.getFloatTimeDomainData(buf);const r=yin(micCtx.sampleRate/decimation);
   $('lvl').style.width=Math.min(100,r.rms*700)+'%';
   if(!r.f||r.conf<.7){
     if(!r.f){floor=floor*.97+r.rms*.03;gate=Math.max(.004,Math.min(.03,floor*2.8))}
     if(TR.voiced&&now-TR.lastV>160)TR.voiced=false;
     TR.cand=null;TR.candN=0;
-    return TR.voiced?TR.sm:null;
+    return null;
   }
   const c=1200*Math.log2(r.f/st.f0);
   if(!TR.voiced){
@@ -340,6 +380,7 @@ function detect(now){
       const need=Math.abs(ad-1200)<80||Math.abs(ad-700)<60?4:2;
       if(TR.cand!==null&&Math.abs(c-TR.cand)<45){if(++TR.candN>=need){TR.sm=c;TR.cand=null;TR.candN=0}else TR.cand=c}
       else{TR.cand=c;TR.candN=1}
+      if(TR.cand!==null){TR.lastV=now;return null}
     }else{
       TR.cand=null;TR.candN=0;
       const a=Math.min(.85,Math.max(.12,ad/60));TR.sm+=a*d;
@@ -354,7 +395,7 @@ function showTarget(){
   $('tFrac').textContent=st.mode==='id'&&!answered?'?/?':h.num+'/'+h.den;
   $('tName').textContent=st.mode==='id'&&!answered?'Name this partial by ear':NAME[st.target];
   $('tC').textContent=st.mode==='id'&&!answered?'Listen, then choose below':h.c.toFixed(1)+'¢ above 1/1 · '+noteOf(tgtF(st.target)).name;
-  $('tN').style.color=`var(${COL(st.target)})`;
+  $('tN').style.color=st.mode==='id'&&!answered?'var(--mute)':`var(${COL(st.target)})`;   // the colour would give away the answer
 }
 function statLine(n){const s=st.stats[n];if(!s)return'no tries yet';const a=[];if(s.hits)a.push('sung '+s.hits+'× · ±'+(s.err/s.hits).toFixed(1)+'¢');if(s.tot)a.push(Math.round(100*s.ok/s.tot)+'% by ear');return a.join(' · ')||'no tries yet'}
 function renderChips(){
@@ -364,66 +405,95 @@ $('chips').addEventListener('click',e=>{
   const b=e.target.closest('.hchip');if(!b)return;const n=+b.dataset.n;
   if(st.set.includes(n)){if(st.set.length===1){setStatus('Keep at least one harmonic selected.','bad');return}st.set=st.set.filter(x=>x!==n)}else{st.set.push(n);st.set.sort((a,b)=>a-b)}
   tone(tgtF(n),0,1,.18);
-  if(!st.set.includes(st.target))next(false);
-  renderChips();renderChoices();save();
+  if(!st.set.includes(st.target))next(false);else if(!answered)renderChoices();
+  renderChips();save();
 });
-$('preset').onchange=e=>{if(!e.target.value)return;st.set=e.target.value.split(',').map(Number);e.target.value='';if(!st.set.includes(st.target))next(false);renderChips();renderChoices();save()};
+$('preset').onchange=e=>{if(!e.target.value)return;st.set=e.target.value.split(',').map(Number);e.target.value='';if(!st.set.includes(st.target))next(false);else if(!answered)renderChoices();renderChips();save()};
 
 /* ---------- exercise flow ---------- */
-let hold=0,errAcc=0,errN=0,paused=0,answered=false;
+let hold=0,errAcc=0,errN=0,paused=0,answered=false,asked=false,advanceTimer=null,armed=true;
 function setStatus(t,c){const s=$('status');s.textContent=t;s.className='status '+(c||'')}
+function clearAdvance(){if(advanceTimer){clearTimeout(advanceTimer);advanceTimer=null}}
 function pick(){const pool=st.set.filter(n=>n!==st.target||st.set.length===1);return pool[Math.floor(Math.random()*pool.length)]}
 function next(play=true){
-  st.target=pick();hold=0;errAcc=0;errN=0;answered=false;showTarget();renderChoices();
-  if(st.mode==='id'&&play)setTimeout(playQuestion,250);
-  if(st.mode==='sing'&&play)setStatus('Find the '+NAME[st.target]+'. Tap Hear target if you need it.','');
+  clearAdvance();
+  st.target=pick();hold=0;errAcc=0;errN=0;answered=false;asked=false;showTarget();renderChoices();syncButtons();
+  if(st.mode==='id'&&play)setTimeout(()=>{if(st.mode==='id'&&!answered)playQuestion()},250);
+  if(st.mode==='sing'&&play)setStatus(`Find the ${NAME[st.target]}. Tap Hear target if you need it.`,'');
 }
-function playQuestion(){if(!st.drone)tone(st.f0,0,2.2,.18);tone(tgtF(st.target),0,2.2,.22)}
+function playQuestion(){asked=true;syncButtons();if(!st.drone)tone(st.f0,0,2.2,.18);tone(tgtF(st.target),0,2.2,.22);
+  if(!answered)setStatus(`Which harmonic is this? Tap a tile${st.set.length<=9?` or press 1–${st.set.length}`:''}.`,'')}
+// after answering, a tile plays its own harmonic over the root so you can compare
+function playCompare(n){if(!st.drone)tone(st.f0,0,1.8,.16);tone(tgtF(n),0,1.8,.2)}
 function bump(n,k,v){const s=st.stats[n]||(st.stats[n]={hits:0,err:0,ok:0,tot:0});s[k]+=v}
 function success(){
   const e=errN?errAcc/errN:0;bump(st.target,'hits',1);bump(st.target,'err',Math.abs(e));
   st.score++;st.streak++;updScore();renderChips();save();
   setStatus(`Got it: ${NAME[st.target]}, average ${fmt(e)}¢.`,'good');
-  tone(tgtF(st.target),0,1.4,.16);paused=performance.now()+1500;setTimeout(()=>{if(st.mode==='sing')next()},1500);
+  tone(tgtF(st.target),0,1.4,.16);paused=performance.now()+1500;
+  armed=false;   // score again only after leaving the pitch, so a held note can't rack up points
+  clearAdvance();advanceTimer=setTimeout(()=>{advanceTimer=null;if(st.mode==='sing')next()},1500);
 }
 function updScore(){$('score').textContent=st.score;$('streak').textContent=st.streak}
 function renderChoices(){
+  $('choices').classList.toggle('answered',answered);
   $('choices').innerHTML=st.set.map(n=>{const h=H(n);return`<button class="choice" data-n="${n}" style="--c:var(${COL(n)})"><b>${n}</b><small>${h.num}/${h.den}</small></button>`}).join('');
 }
-$('choices').addEventListener('click',e=>{
-  const b=e.target.closest('.choice');if(!b||answered)return;const n=+b.dataset.n;
-  answered=true;bump(st.target,'tot',1);
-  if(n===st.target){bump(n,'ok',1);st.score++;st.streak++;b.classList.add('right');setStatus('Right: harmonic '+n+', the '+NAME[n]+'.','good')}
-  else{st.streak=0;b.classList.add('wrong');const r=$('choices').querySelector(`[data-n="${st.target}"]`);r&&r.classList.add('right');setStatus(`That was ${st.target} (${NAME[st.target]}), not ${n}. Compare them with the buttons above.`,'bad')}
-  updScore();showTarget();renderChips();save();
-  setTimeout(()=>{if(st.mode==='id')next()},n===st.target?1300:2600);
-});
+function answer(n,b){
+  if(answered){playCompare(n);return}
+  if(!asked){playQuestion();return}   // nothing to name until it has played
+  answered=true;bump(st.target,'tot',1);$('choices').classList.add('answered');
+  const ok=n===st.target;
+  if(ok){bump(n,'ok',1);st.score++;st.streak++;b.classList.add('right');setStatus(`Right: harmonic ${n}, the ${NAME[n]}.`,'good')}
+  else{st.streak=0;b.classList.add('wrong');const r=$('choices').querySelector(`[data-n="${st.target}"]`);r&&r.classList.add('right');
+    setStatus(`That was ${st.target}, the ${NAME[st.target]}, not ${n}. Tap the tiles to compare them, then press Next.`,'bad')}
+  updScore();showTarget();renderChips();save();syncButtons();
+  if(ok){clearAdvance();advanceTimer=setTimeout(()=>{advanceTimer=null;if(st.mode==='id')next()},1300)}
+}
+$('choices').addEventListener('click',e=>{const b=e.target.closest('.choice');if(b)answer(+b.dataset.n,b)});
+function syncButtons(){
+  const id=st.mode==='id';
+  $('hearBtn').textContent=id?(asked?'Play again':'Play'):'Hear target';
+  $('withBtn').hidden=id&&!answered;   // in Identify it would give the answer away
+  $('skipBtn').hidden=st.mode==='free';$('skipBtn').textContent=id&&answered?'Next':'Skip';
+  $('skipBtn').classList.toggle('primary',id&&answered);
+}
 $('hearBtn').onclick=()=>{if(st.mode==='id'){playQuestion();return}tone(tgtF(st.target),0,1.8,.24)};
 $('withBtn').onclick=()=>{tone(st.f0,0,2.2,.18);tone(tgtF(st.target),0,2.2,.2)};
-$('skipBtn').onclick=()=>{st.streak=0;updScore();next()};
+$('skipBtn').onclick=()=>{if(!(st.mode==='id'&&answered)){st.streak=0;updScore()}next()};
 function setMode(m){
+  clearAdvance();
   st.mode=m;save();
   $('tabs').querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.m===m)));
-  $('tabs').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.m===m)));
   $('singUI').style.display=m==='id'?'none':'flex';$('idUI').hidden=m!=='id';
   $('eyebrow').textContent=m==='sing'?'Sing this partial':m==='id'?'Which harmonic is this?':'Free singing';
-  $('skipBtn').hidden=m==='free';$('hearBtn').textContent=m==='id'?'Play again':'Hear target';
-  answered=false;hold=0;showTarget();
-  if(m==='id'){renderChoices();setStatus('Tap Play again to hear it.','')}
+  answered=false;asked=false;hold=0;errAcc=0;errN=0;showTarget();renderChoices();syncButtons();
+  if(m==='id')setStatus('Press Play to hear a harmonic over the root, then name it.','');
   else if(m==='free')setStatus(micOn?'Sing anything. The nearest selected harmonic lights up.':'Enable the microphone to start.','');
-  else setStatus(micOn?'Find the '+NAME[st.target]+'.':'Enable the microphone, then sing the target over the drone.','');
+  else setStatus(micOn?`Find the ${NAME[st.target]}.`:'Enable the microphone, then sing the target over the drone.','');
 }
 $('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setMode(b.dataset.m)});
+// keys: Space plays (or hears) the target; 1–9 answer in Identify; N moves on
+document.addEventListener('keydown',e=>{
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  const tg=document.activeElement&&document.activeElement.tagName;if(tg==='INPUT'||tg==='SELECT'||tg==='TEXTAREA')return;
+  if(e.key===' '&&tg!=='BUTTON'){e.preventDefault();$('hearBtn').click();return}
+  if((e.key==='n'||e.key==='N')&&!$('skipBtn').hidden){$('skipBtn').click();return}
+  const k=+e.key;if(st.mode==='id'&&k>=1&&k<=9){const b=$('choices').querySelectorAll('.choice')[k-1];if(b)answer(+b.dataset.n,b)}
+});
 
 /* ---------- controls ---------- */
 const VO=['98','130.81','146.83','196','261.63'];
 function syncVoice(){$('f0').value=st.f0;$('voice').value=VO.includes(String(st.f0))?String(st.f0):'custom'}
-$('voice').onchange=e=>{if(e.target.value==='custom'){$('f0').focus();return}st.f0=+e.target.value;$('f0').value=st.f0;if(droneN){setDrone(false);setDrone(true)}showTarget();save()};
-$('f0').onchange=e=>{const v=+e.target.value;if(v>=40&&v<=1000){st.f0=v;syncVoice();if(droneN){setDrone(false);setDrone(true)}showTarget();save()}else e.target.value=st.f0};
+$('voice').onchange=e=>{if(e.target.value==='custom'){$('f0').focus();return}st.f0=+e.target.value;$('f0').value=st.f0;resetTracking();if(droneN){setDrone(false);setDrone(true)}showTarget();save()};
+$('f0').onchange=e=>{const v=+e.target.value;if(v>=55&&v<=500){st.f0=v;syncVoice();resetTracking();if(droneN){setDrone(false);setDrone(true)}showTarget();save()}else e.target.value=st.f0};
 $('tol').value=st.tol;$('tol').onchange=e=>{st.tol=+e.target.value;save()};
 $('vol').value=st.vol;$('vol').oninput=e=>{st.vol=+e.target.value;if(master)master.gain.value=st.vol;save()};
 $('droneBtn').onclick=()=>setDrone(!st.drone);
-$('micBtn').onclick=()=>{if(!micOn)enableMic()};
+$('micBtn').onclick=()=>{if(micOn){disableMic();setStatus('Microphone off. Enable it to sing again.','')}else enableMic()};
+// the microphone and drone never keep running behind a hidden tab
+document.addEventListener('visibilitychange',()=>{if(document.hidden){const was=micOn||micPending;if(was)disableMic();if(droneN)setDrone(false);if(was)setStatus('The microphone turned off while the tab was hidden. Enable it to sing again.','')}});
+window.addEventListener('pagehide',()=>{if(micOn||micPending)disableMic();if(droneN)setDrone(false)});
 
 /* ---------- trace ---------- */
 const cv=$('trace'),g=cv.getContext('2d');const trail=[];
@@ -438,13 +508,25 @@ function drawTrace(now,cur){
   g.strokeStyle=grid;g.lineWidth=1;[0,1200].forEach(c=>{g.beginPath();g.moveTo(L,y(c));g.lineTo(L+w,y(c));g.stroke()});
   g.fillStyle=mute;g.fillText('1/1',8,y(0));g.fillText('2/1',8,y(1200));
   // target band
-  if(st.mode!=='free'&&st.mode!=='id'){const c=H(st.target).c;g.fillStyle=good;g.globalAlpha=.16;g.fillRect(L,y(c+st.tol),w,y(c-st.tol)-y(c+st.tol));g.globalAlpha=1}
+  if(st.mode==='sing'){
+    const c=H(st.target).c;g.fillStyle=good;g.globalAlpha=.18;
+    for(const shift of[-1200,0,1200]){const cc=c+shift;if(cc+st.tol>0&&cc-st.tol<1200)g.fillRect(L,y(Math.min(1200,cc+st.tol)),w,y(Math.max(0,cc-st.tol))-y(Math.min(1200,cc+st.tol)))}
+    g.globalAlpha=1;
+  }
   // harmonic lines
+  const labels=[];
   for(const n of st.set){
-    const hh=H(n),col=tok(COL(n)),isT=n===st.target&&st.mode==='sing',isN=cur&&cur.near===n;
+    const hh=H(n),col=tok(COL(n)),isT=n===st.target&&(st.mode==='sing'||(st.mode==='id'&&answered)),isN=cur&&cur.near===n;
     g.strokeStyle=col;g.lineWidth=isT||isN?2.4:1.2;g.globalAlpha=isT||isN?1:.65;g.setLineDash(isT?[]:[5,4]);
     g.beginPath();g.moveTo(L,y(hh.c));g.lineTo(L+w,y(hh.c));g.stroke();g.setLineDash([]);g.globalAlpha=1;
-    g.fillStyle=col;g.fillText(`${n} · ${hh.num}/${hh.den}`,8,y(hh.c));
+    if(n!==1)labels.push({n,hh,col,yy:y(hh.c),priority:isT?2:isN?1:0});
+  }
+  const placed=[];
+  labels.sort((a,b)=>b.priority-a.priority||a.yy-b.yy);
+  for(const label of labels){
+    if(placed.some(yy=>Math.abs(yy-label.yy)<14))continue;
+    g.fillStyle=label.col;g.fillText(`${label.n} · ${label.hh.num}/${label.hh.den}`,8,label.yy,L-12);
+    placed.push(label.yy);
   }
   // trail
   const span=8000;while(trail.length&&now-trail[0].t>span)trail.shift();
@@ -455,8 +537,9 @@ function drawTrace(now,cur){
     p.x=x;p.y=yy;prev=p;
   }
   const last=trail[trail.length-1];
-  if(last&&now-last.t<200){g.beginPath();g.arc(last.x,last.y,6,0,Math.PI*2);g.fillStyle=last.ok?good:ink;g.fill()}
-  if(!micOn){g.fillStyle=mute;g.textAlign='center';g.font=`400 14px ${tok('--f-body')}`;g.fillText('Enable the microphone to see your pitch here',L+w/2,T+h/2);g.textAlign='left'}
+  if(last&&now-last.t<200){g.beginPath();g.arc(last.x,last.y,6,0,Math.PI*2);g.fillStyle=last.ok?good:ink;g.fill();g.lineWidth=2;g.strokeStyle=tok('--panel');g.stroke()}
+  const msg=st.mode==='id'?(answered?'':'By ear: the answer’s line lights up once you name it'):micOn?'':'Enable the microphone to see your pitch here';
+  if(msg){g.fillStyle=mute;g.textAlign='center';g.font=`400 14px ${tok('--f-body')}`;g.fillText(msg,L+w/2,T+h/2,w-16);g.textAlign='left'}
 }
 
 /* ---------- main loop ---------- */
@@ -479,17 +562,21 @@ function loop(now){
       if(now-lastTxt>110){lastTxt=now;
         const nt=noteOf(f);$('you').textContent=`You: ${nt.name} ${fmt(nt.dev)}¢`;
         if(st.mode==='free'){$('dir').textContent=`Nearest: ${near} (${H(near).num}/${H(near).den}) ${fmt(dev)}¢`;if(st.target!==near){st.target=near;showTarget()}}
-        else $('dir').textContent=ok?'In tune, hold it':Math.abs(dev)>150?(dev>0?'Far too high':'Far too low'):(dev>0?`${fmt(dev)}¢ · sing lower`:`${fmt(dev)}¢ · sing higher`);
+        else $('dir').textContent=now<scoreBlockedUntil?'Listen to the cue, then sing':ok?'In tune, hold it':Math.abs(dev)>150?(dev>0?'Far too high':'Far too low'):(dev>0?`${fmt(dev)}¢ · sing lower`:`${fmt(dev)}¢ · sing higher`);
       }
       const pos=50+Math.max(-50,Math.min(50,dev))/50*50;const nd2=$('needle');nd2.style.left=pos+'%';nd2.style.opacity=1;nd2.classList.toggle('ok',ok);
-      if(st.mode==='sing'&&now>paused){
-        if(ok){hold+=dt;errAcc+=dev;errN++}else hold=Math.max(0,hold-dt*1.2);
+      if(!ok&&now>paused)armed=true;
+      if(st.mode==='sing'&&now>paused&&armed){
+        if(now<scoreBlockedUntil){hold=0;errAcc=0;errN=0}
+        else if(ok){hold+=dt;errAcc+=dev;errN++}
+        else{hold=Math.max(0,hold-dt*1.5);if(!hold){errAcc=0;errN=0}}   // drain, don't zero: one wobble shouldn't cost the whole hold
         if(hold>=900){hold=0;success()}
       }
       lastVoice=now;
     }else{
       if(now-lastVoice>250){$('needle').style.opacity=.25;if(now-lastTxt>110){lastTxt=now;$('dir').textContent='Waiting for your voice'}}
-      if(st.mode==='sing'&&now-lastVoice>250)hold=Math.max(0,hold-dt*.8);
+      if(now-lastVoice>300&&now>paused)armed=true;
+      if(st.mode==='sing'&&now-lastVoice>300){hold=Math.max(0,hold-dt*1.5);if(!hold){errAcc=0;errN=0}}   // brief dropouts (consonants, breaths) are forgiven
     }
   }
   $('hold').style.width=(st.mode==='sing'?Math.min(100,hold/9):0)+'%';
@@ -500,8 +587,7 @@ function loop(now){
 /* ---------- meter ticks ---------- */
 (()=>{const m=$('meter');let h='';for(const c of[-50,-25,0,25,50]){const x=50+c;h+=`<span class="tick" style="left:${x}%"></span>`;if(c)h+=`<span class="tl" style="left:${Math.min(96,Math.max(4,x))}%">${c>0?'+':''}${c}</span>`}m.insertAdjacentHTML('beforeend',h)})();
 
-syncVoice();renderChips();renderChoices();updScore();setMode(st.mode);showTarget();
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{});
+syncVoice();renderChips();updScore();setMode(st.mode);
 requestAnimationFrame(loop);
 })();
 </script>
