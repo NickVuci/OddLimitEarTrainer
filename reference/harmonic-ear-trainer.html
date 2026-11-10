@@ -51,6 +51,8 @@ button[aria-pressed="true"]{background:var(--ink);color:var(--sel-ink);border-co
 .brand p{margin:0;color:var(--mute);max-width:62ch}
 .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 label.ctl{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mute)}
+input[type=range].tolerance-slider{width:150px}
+.tolerance-value{min-width:5ch;font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--ink)}
 .gate-help{flex-basis:100%;font-size:11px;color:var(--mute)}
 .noise-state{font-size:11px;color:var(--mute)}
 .mic{display:inline-flex;align-items:center;gap:8px;border-radius:999px;font-weight:700;padding:9px 14px}
@@ -180,7 +182,8 @@ h2,h3{color:var(--nv-burgundy-ink)}
       </label>
       <label class="ctl" for="f0">1/1 <input id="f0" type="number" min="55" max="500" step="0.01" value="130.81"> Hz</label>
       <label class="ctl" for="tol">Tolerance
-        <select id="tol"><option value="5">±5¢</option><option value="10">±10¢</option><option value="15">±15¢</option><option value="25">±25¢</option></select>
+        <input class="tolerance-slider" id="tol" type="range" min="5" max="50" step="1" value="25" aria-describedby="tolVal">
+        <output class="tolerance-value" id="tolVal" for="tol">±25¢</output>
       </label>
       <label class="ctl" for="vol">Volume <input id="vol" type="range" min="0" max="1" step="0.01" value="0.5"></label>
       <button id="droneBtn" aria-pressed="false">Drone 1/1</button>
@@ -269,11 +272,11 @@ const sdiff=(a,b)=>{let d=wrap(a-b);if(d>=600)d-=1200;return d};
 const fmt=x=>(x>=0?'+':'−')+Math.abs(x).toFixed(0);
 
 /* ---------- state ---------- */
-const st={f0:130.81,tol:10,vol:.5,noiseSuppression:false,noiseGate:2,mode:'sing',set:[3,5,7],drone:false,score:0,streak:0,target:7,stats:{}};
+const st={f0:130.81,tol:25,vol:.5,noiseSuppression:false,noiseGate:2,mode:'sing',set:[3,5,7],drone:false,score:0,streak:0,target:7,stats:{}};
 try{const s=JSON.parse(localStorage.getItem('harmtrainer')||'null');if(s)Object.assign(st,s,{drone:false})}catch(e){}
 st.f0=Number.isFinite(+st.f0)?Math.min(500,Math.max(55,+st.f0)):130.81;
 st.set=Array.isArray(st.set)?[...new Set(st.set.filter(n=>ODD.includes(n)))]:[3,5,7];
-if(![5,10,15,25].includes(+st.tol))st.tol=10;
+st.tol=Number.isFinite(+st.tol)?Math.min(50,Math.max(5,Math.round(+st.tol))):25;
 if(!['sing','id','free'].includes(st.mode))st.mode='sing';
 st.vol=Number.isFinite(+st.vol)?Math.min(1,Math.max(0,+st.vol)):.5;
 st.noiseSuppression=st.noiseSuppression===true;
@@ -535,7 +538,8 @@ const VO=['98','130.81','146.83','196','261.63'];
 function syncVoice(){$('f0').value=st.f0;$('voice').value=VO.includes(String(st.f0))?String(st.f0):'custom'}
 $('voice').onchange=e=>{if(e.target.value==='custom'){$('f0').focus();return}st.f0=+e.target.value;$('f0').value=st.f0;resetTracking();if(droneN){setDrone(false);setDrone(true)}showTarget();save()};
 $('f0').onchange=e=>{const v=+e.target.value;if(v>=55&&v<=500){st.f0=v;syncVoice();resetTracking();if(droneN){setDrone(false);setDrone(true)}showTarget();save()}else e.target.value=st.f0};
-$('tol').value=st.tol;$('tol').onchange=e=>{st.tol=+e.target.value;save()};
+$('tol').value=st.tol;$('tolVal').textContent=`±${st.tol}¢`;
+$('tol').oninput=e=>{st.tol=+e.target.value;$('tolVal').textContent=`±${st.tol}¢`;save()};
 $('vol').value=st.vol;$('vol').oninput=e=>{st.vol=+e.target.value;if(master)master.gain.value=st.vol*GAIN_TRIM;save()};
 $('noise').checked=st.noiseSuppression;syncNoiseState();
 $('noise').onchange=async e=>{
