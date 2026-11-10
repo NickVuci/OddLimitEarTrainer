@@ -51,6 +51,8 @@ button[aria-pressed="true"]{background:var(--ink);color:var(--sel-ink);border-co
 .brand p{margin:0;color:var(--mute);max-width:62ch}
 .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 label.ctl{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mute)}
+.gate-help{flex-basis:100%;font-size:11px;color:var(--mute)}
+.noise-state{font-size:11px;color:var(--mute)}
 .mic{display:inline-flex;align-items:center;gap:8px;border-radius:999px;font-weight:700;padding:9px 14px}
 .mic .lvl{width:38px;height:6px;border-radius:3px;background:var(--grid);overflow:hidden}
 .mic .lvl span{display:block;height:100%;width:0;background:var(--good)}
@@ -183,6 +185,9 @@ h2,h3{color:var(--nv-burgundy-ink)}
       <label class="ctl" for="vol">Volume <input id="vol" type="range" min="0" max="1" step="0.01" value="0.5"></label>
       <button id="droneBtn" aria-pressed="false">Drone 1/1</button>
       <button id="micBtn" class="mic"><span id="micTxt">Enable microphone</span><span class="lvl"><span id="lvl"></span></span></button>
+      <label class="ctl" for="noise"><input id="noise" type="checkbox"> Reduce background noise <output id="noiseState" class="noise-state" aria-live="polite">Off</output></label>
+      <label class="ctl" for="gate">Noise gate <input id="gate" type="range" min="0" max="10" step="1" value="2" aria-describedby="gateHelp"> <output id="gateVal" for="gate">2/10</output></label>
+      <small class="gate-help" id="gateHelp">Move the gate right until room noise stops producing pitch readings; move it left if soft notes disappear. Noise suppression can soften sustained notes.</small>
     </div>
   </header>
 
@@ -264,15 +269,17 @@ const sdiff=(a,b)=>{let d=wrap(a-b);if(d>=600)d-=1200;return d};
 const fmt=x=>(x>=0?'+':'−')+Math.abs(x).toFixed(0);
 
 /* ---------- state ---------- */
-const st={f0:130.81,tol:10,vol:.5,mode:'sing',set:[3,5,7],drone:false,score:0,streak:0,target:7,stats:{}};
+const st={f0:130.81,tol:10,vol:.5,noiseSuppression:false,noiseGate:2,mode:'sing',set:[3,5,7],drone:false,score:0,streak:0,target:7,stats:{}};
 try{const s=JSON.parse(localStorage.getItem('harmtrainer')||'null');if(s)Object.assign(st,s,{drone:false})}catch(e){}
 st.f0=Number.isFinite(+st.f0)?Math.min(500,Math.max(55,+st.f0)):130.81;
 st.set=Array.isArray(st.set)?[...new Set(st.set.filter(n=>ODD.includes(n)))]:[3,5,7];
 if(![5,10,15,25].includes(+st.tol))st.tol=10;
 if(!['sing','id','free'].includes(st.mode))st.mode='sing';
 st.vol=Number.isFinite(+st.vol)?Math.min(1,Math.max(0,+st.vol)):.5;
+st.noiseSuppression=st.noiseSuppression===true;
+st.noiseGate=Number.isInteger(+st.noiseGate)?Math.min(10,Math.max(0,+st.noiseGate)):2;
 if(!st.stats||typeof st.stats!=='object'||Array.isArray(st.stats))st.stats={};
-const save=()=>{try{localStorage.setItem('harmtrainer',JSON.stringify({f0:st.f0,tol:st.tol,vol:st.vol,mode:st.mode,set:st.set,stats:st.stats}))}catch(e){}};
+const save=()=>{try{localStorage.setItem('harmtrainer',JSON.stringify({f0:st.f0,tol:st.tol,vol:st.vol,noiseSuppression:st.noiseSuppression,noiseGate:st.noiseGate,mode:st.mode,set:st.set,stats:st.stats}))}catch(e){}};
 if(!st.set.length)st.set=[3,5,7];
 if(!st.set.includes(st.target))st.target=st.set[0];
 
@@ -327,13 +334,13 @@ async function enableMic(){
   const n=$('notice');
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){showNotice();return}
   if(micPending||micOn)return;
-  micPending=true;$('micBtn').disabled=true;$('micTxt').textContent='Connecting…';
+  micPending=true;$('micBtn').disabled=true;$('noise').disabled=true;$('micTxt').textContent='Connecting…';
   const epoch=++micEpoch;
   try{
     // Keep the mic analysis separate from the speakers while sharing the running output context.
     const a=await ensureAudio();
     if(epoch!==micEpoch)return;
-    const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:true}});
+    const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:st.noiseSuppression,autoGainControl:true}});
     if(epoch!==micEpoch){s.getTracks().forEach(t=>t.stop());return}
     micStream=s;
     const src=a.createMediaStreamSource(s);
@@ -347,16 +354,18 @@ async function enableMic(){
     if(epoch!==micEpoch)return;
     micOn=true;$('micTxt').textContent='Turn microphone off';$('micBtn').setAttribute('aria-pressed','true');n.hidden=true;
     resetTracking();
+    syncNoiseState(s.getAudioTracks()[0]);
     $('micTip').hidden=false;
     setStatus(st.mode==='id'?'Microphone on. Identify mode is by ear, so it isn’t listening here.':st.mode==='free'?'Listening. Sing anything; the nearest selected harmonic lights up.':`Listening. Find the ${NAME[st.target]}. Headphones keep the drone out of the mic.`,'');
   }catch(e){if(epoch===micEpoch){disableMic();if(!e||!e.audioStart)showNotice(e&&e.name)}}
-  finally{micPending=false;$('micBtn').disabled=false;if(!micOn)$('micTxt').textContent='Enable microphone'}
+  finally{micPending=false;$('micBtn').disabled=false;$('noise').disabled=false;if(!micOn)$('micTxt').textContent='Enable microphone'}
 }
 function disableMic(){
   micEpoch++;
   if(micStream){micStream.getTracks().forEach(t=>{t.onended=null;t.stop()});micStream=null}
   if(micNodes){micNodes.forEach(n=>n.disconnect());micNodes=null}
   an=null;buf=null;micOn=false;resetTracking();$('micTip').hidden=true;
+  syncNoiseState();
   $('micTxt').textContent='Enable microphone';$('micBtn').setAttribute('aria-pressed','false');$('lvl').style.width='0%';
   $('needle').style.opacity=.25;$('you').textContent='You: —';$('dir').textContent='Waiting for your voice';
 }
@@ -365,6 +374,13 @@ function showNotice(name){
   n.innerHTML=name==='NotAllowedError'
     ?'<b>Microphone blocked.</b> Allow microphone access for this page in your browser settings, then try again. Identify mode works without it.'
     :'<b>The microphone isn’t available.</b> Check the device and open this page on localhost or HTTPS in Chrome, Edge or Firefox. Identify mode works without a mic.';
+}
+function syncNoiseState(track){
+  const actual=track&&track.getSettings?.().noiseSuppression;
+  $('noiseState').textContent=!track?(st.noiseSuppression?'On next mic start':'Off'):
+    actual===true?(st.noiseSuppression?'On':'On (device)'):
+    actual===false?(st.noiseSuppression?'Not active on this mic':'Off'):
+    st.noiseSuppression?'Requested; unconfirmed':'Off';
 }
 /* YIN on a window decimated to at most 24 kHz; lag search covers 55–1200 Hz */
 const DB=new Float32Array(2048),DF=new Float32Array(600);
@@ -382,18 +398,19 @@ function yin(sr){
   return{f:sr/(T+Math.max(-1,Math.min(1,sh))),rms,conf:1-x1};
 }
 /* tracker: noise-adaptive gate, onset confirmation, octave-jump rejection, adaptive smoothing */
-let gate=.0015,floor=.0005;
+const gateBase=()=>.0008*Math.pow(25,st.noiseGate/10);
+let gate=gateBase(),floor=.0005;
 const TR={voiced:false,sm:0,lastV:0,cand:null,candN:0};
 function resetTracking(){
   TR.voiced=false;TR.sm=0;TR.lastV=0;TR.cand=null;TR.candN=0;
-  gate=.0015;floor=.0005;
+  gate=gateBase();floor=.0005;
   VW.length=0;trail.length=0;hold=0;errAcc=0;errN=0;lastVoice=0;
 }
 function detect(now){
   an.getFloatTimeDomainData(buf);const r=yin(ac.sampleRate/decimation);
   $('lvl').style.width=Math.min(100,Math.max(0,(20*Math.log10(Math.max(r.rms,1e-6))+65)*2.5))+'%';
   if(!r.f||r.conf<.7){
-    if(!r.f&&r.rms<gate*.7){floor=floor*.97+r.rms*.03;gate=Math.max(.0008,Math.min(.02,floor*1.8))}
+    if(!r.f&&r.rms<gate*.7){floor=floor*.97+r.rms*.03;gate=Math.max(gateBase(),Math.min(.02,floor*1.8))}
     if(TR.voiced&&now-TR.lastV>160)TR.voiced=false;
     TR.cand=null;TR.candN=0;
     return null;
@@ -520,6 +537,25 @@ $('voice').onchange=e=>{if(e.target.value==='custom'){$('f0').focus();return}st.
 $('f0').onchange=e=>{const v=+e.target.value;if(v>=55&&v<=500){st.f0=v;syncVoice();resetTracking();if(droneN){setDrone(false);setDrone(true)}showTarget();save()}else e.target.value=st.f0};
 $('tol').value=st.tol;$('tol').onchange=e=>{st.tol=+e.target.value;save()};
 $('vol').value=st.vol;$('vol').oninput=e=>{st.vol=+e.target.value;if(master)master.gain.value=st.vol*GAIN_TRIM;save()};
+$('noise').checked=st.noiseSuppression;syncNoiseState();
+$('noise').onchange=async e=>{
+  const prev=st.noiseSuppression;st.noiseSuppression=e.target.checked;save();
+  const track=micStream?.getAudioTracks()[0];if(!track){syncNoiseState();return}
+  e.target.disabled=true;
+  try{
+    if(track.applyConstraints){
+      await track.applyConstraints({echoCancellation:false,noiseSuppression:st.noiseSuppression,autoGainControl:true});
+      if(track!==micStream?.getAudioTracks()[0])return;
+      resetTracking();syncNoiseState(track);
+    }else{disableMic();await enableMic()}
+  }catch(err){
+    if(track!==micStream?.getAudioTracks()[0])return;
+    st.noiseSuppression=prev;e.target.checked=prev;save();syncNoiseState(track);
+    setStatus('Could not change noise suppression for this microphone.','bad');
+  }finally{e.target.disabled=micPending}
+};
+$('gate').value=st.noiseGate;$('gateVal').textContent=st.noiseGate+'/10';
+$('gate').oninput=e=>{st.noiseGate=+e.target.value;$('gateVal').textContent=st.noiseGate+'/10';resetTracking();save()};
 $('droneBtn').onclick=()=>setDrone(!st.drone);
 $('micBtn').onclick=()=>{if(micOn){disableMic();setStatus('Microphone off. Enable it to sing again.','')}else enableMic()};
 // the microphone and drone never keep running behind a hidden tab
